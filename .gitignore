@@ -1,0 +1,6 @@
+Back-End/config.env
+Front-End/.env
+Front-End/node_modules
+Back-End/node_modules
+Back-End/serviceAccountKey.json
+
