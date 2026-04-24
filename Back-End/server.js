@@ -68,8 +68,6 @@ io.on("connection", (socket) => {
     io.emit("rfid-scanned", { ...data, timestamp: new Date() });
   });
 
-  
-
   // REGISTER USER
   socket.on("register-user", (userId, role) => {
     if (!userId) {
@@ -96,10 +94,7 @@ io.on("connection", (socket) => {
 
   socket.on("admin:send-to-incharge", (targetUserId, messageData) => {
     if (socket.role !== "admin") return;
-    io.to(`private:in-charge:${targetUserId}`).emit(
-      "private-alert",
-      messageData,
-    );
+    io.to(`private:in-charge:${targetUserId}`).emit("private-alert", messageData);
   });
 
   socket.on("incharge:send-to-admin", (targetUserId, messageData) => {
@@ -133,7 +128,7 @@ io.on("connection", (socket) => {
         try {
           await loginSchema.findOneAndUpdate(
             { userId: socket.userId },
-            { $set: { status: "offline" } },
+            { $set: { status: "offline" } }
           );
 
           console.log(`💤 Rescuer ${socket.userId} OFFLINE`);
