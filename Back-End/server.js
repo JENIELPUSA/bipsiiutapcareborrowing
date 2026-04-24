@@ -26,7 +26,6 @@ const io = socketIo(server, {
 });
 
 app.set("io", io);
-
 if (process.env.NODE_ENV === "development") {
     const pythonCmd = process.platform === "win32" ? "py" : "python3";
     const desktopPath = path.join(os.homedir(), "Desktop", "RFID-Bridge", "scan.py");
