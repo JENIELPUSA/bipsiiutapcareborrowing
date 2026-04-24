@@ -4,7 +4,7 @@ from smartcard.System import readers
 from smartcard.util import toHexString
 
 # Set the URL of your server
-SERVER_URL = "http://localhost:3000"
+SERVER_URL = "https://bipsiiutapcareborrowingserver.onrender.com"
 
 # Initialize Socket.IO client
 sio = socketio.Client()
