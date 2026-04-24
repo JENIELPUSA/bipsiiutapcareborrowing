@@ -3,7 +3,7 @@ const fs = require("fs");
 
 exports.downloadAgent = (req, res) => {
     try {
-        const filePath = path.join(__dirname, "..", "public", "downloads", "RFID-Agent.exe");
+        const filePath = path.join(__dirname, "..", "public", "downloads", "scan.exe");
 
         if (fs.existsSync(filePath)) {
             console.log("📥 User started downloading the Standalone RFID Bridge EXE.");
