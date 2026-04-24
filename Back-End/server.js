@@ -28,33 +28,23 @@ const io = socketIo(server, {
 app.set("io", io);
 
 if (process.env.NODE_ENV === "development") {
-  const pythonCmd = process.platform === "win32" ? "py" : "python3";
+    const pythonCmd = process.platform === "win32" ? "py" : "python3";
+    const desktopPath = path.join(os.homedir(), "Desktop", "RFID-Bridge", "scan.py");
 
-  const pythonScript = path.join(__dirname, "scan.py");
+    console.log(`🛠️ Dev Mode: Spawning local Python at ${desktopPath}`);
+    const rfidPython = spawn(pythonCmd, [desktopPath]);
 
-  console.log(`🛠️ Dev Mode: Spawning local Python at ${pythonScript}`);
+    rfidPython.stdout.on('data', (data) => {
+        const cardUID = data.toString().trim();
+        if (cardUID && cardUID !== "NO_READER") {
+            console.log(`Local Scan: ${cardUID}`);
+            io.emit("rfid-scanned", { uid: cardUID, timestamp: new Date(), source: "Local-Spawn" });
+        }
+    });
 
-  const rfidPython = spawn(pythonCmd, [pythonScript]);
-
-  rfidPython.stdout.on("data", (data) => {
-    const cardUID = data.toString().trim();
-
-    if (cardUID && cardUID !== "NO_READER") {
-      console.log(`Local Scan: ${cardUID}`);
-
-      io.emit("rfid-scanned", {
-        uid: cardUID,
-        timestamp: new Date(),
-        source: "Local-Spawn",
-      });
-    }
-  });
-
-  rfidPython.stderr.on("data", (data) => {
-    console.error(`Python Error: ${data}`);
-  });
+    rfidPython.stderr.on('data', (data) => console.error(`Python Error: ${data}`));
 } else {
-  console.log("🚀 Production Mode: Waiting for remote RFID bridge...");
+    console.log("🚀 Production Mode: Waiting for remote RFID bridge from your Desktop...");
 }
 // Global storage para sa active connections
 global.connectedUsers = {};
@@ -67,6 +57,8 @@ io.on("connection", (socket) => {
     console.log("UID received from Remote Desktop:", data.uid);
     io.emit("rfid-scanned", { ...data, timestamp: new Date() });
   });
+
+  
 
   // REGISTER USER
   socket.on("register-user", (userId, role) => {
@@ -94,7 +86,10 @@ io.on("connection", (socket) => {
 
   socket.on("admin:send-to-incharge", (targetUserId, messageData) => {
     if (socket.role !== "admin") return;
-    io.to(`private:in-charge:${targetUserId}`).emit("private-alert", messageData);
+    io.to(`private:in-charge:${targetUserId}`).emit(
+      "private-alert",
+      messageData,
+    );
   });
 
   socket.on("incharge:send-to-admin", (targetUserId, messageData) => {
@@ -128,7 +123,7 @@ io.on("connection", (socket) => {
         try {
           await loginSchema.findOneAndUpdate(
             { userId: socket.userId },
-            { $set: { status: "offline" } }
+            { $set: { status: "offline" } },
           );
 
           console.log(`💤 Rescuer ${socket.userId} OFFLINE`);
