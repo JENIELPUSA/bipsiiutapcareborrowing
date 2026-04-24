@@ -61,7 +61,7 @@ export const AdminDisplayProvider = ({ children }) => {
             return;
         }
         try {
-            const response = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin/profile/${linkId}`, {
+            const response = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin/profile/${linkId}`, {
                 // Added /profile/${linkId}
                 withCredentials: true,
                 headers: {
@@ -122,7 +122,8 @@ export const AdminDisplayProvider = ({ children }) => {
                 formData.append("last_name", values.last_name || "");
                 formData.append("middle_name", values.middle_name || "");
                 formData.append("email", values.email || "");
-                formData.append("role", "admin");
+                formData.append("role", values.role || "");
+                formData.append("laboratoryId", values.laboratoryId || "");
                 if (values.avatar) formData.append("avatar", values.avatar);
 
                 const response = await axios.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin/${dataID}`, formData, {
@@ -134,8 +135,6 @@ export const AdminDisplayProvider = ({ children }) => {
 
                 if (response.data?.status === "success") {
                     FetchAdminData();
-                    setModalStatus("success");
-                    setShowModal(true);
                     return { success: true, data: response.data.data };
                 } else {
                     setModalStatus("failed");
@@ -158,6 +157,7 @@ export const AdminDisplayProvider = ({ children }) => {
     // Add admin with useCallback
     const AddAdmin = useCallback(
         async (values) => {
+            console.log("Adding admin with values:", values);
             try {
                 const formData = new FormData();
                 formData.append("first_name", values.first_name || "");
@@ -165,12 +165,25 @@ export const AdminDisplayProvider = ({ children }) => {
                 formData.append("email", values.email || "");
                 formData.append("suffix", values.suffix || "");
                 formData.append("gender", values.gender || "");
-                formData.append("role", values.role || "admin");
+                formData.append("role", values.role || "");
                 formData.append("password", values.password || "");
+                formData.append("confirmPassword", values.confirmPassword || "");
                 formData.append("laboratoryId", values.laboratoryId || "");
 
                 if (values.middle_name) {
                     formData.append("middle_name", values.middle_name);
+                }
+                if (values.address) {
+                    formData.append("address", values.address);
+                }
+                if (values.borrowerType) {
+                    formData.append("borrowerType", values.borrowerType);
+                }
+                if (values.rfidId) {
+                    formData.append("rfidId", values.rfidId);
+                }
+                if (values.contactNumber) {
+                    formData.append("contactNumber", values.contactNumber);
                 }
 
                 if (values.avatar) formData.append("avatar", values.avatar);
@@ -201,6 +214,31 @@ export const AdminDisplayProvider = ({ children }) => {
         },
         [authToken, FetchAdminData],
     );
+
+    const UpdateUserStatus = async (userId) => {
+        if (!authToken) return;
+
+        setLoading(true);
+        try {
+            const res = await axios.patch(
+                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin/updateStatus/${userId}`,
+                {},
+                {
+                    headers: { Authorization: `Bearer ${authToken}` },
+                },
+            );
+            setLoading(false);
+
+            console.log("Update status response:", res.data);
+            if (res.data.status) {
+                return { success: true };
+            }
+        } catch (err) {
+            setLoading(false);
+            console.error("Update status error:", err.response?.data || err.message);
+            throw err;
+        }
+    };
 
     // Handle search
     const handleSearch = useCallback((query) => {
@@ -264,6 +302,7 @@ export const AdminDisplayProvider = ({ children }) => {
                 setRowsPerPage,
                 handleSearch,
                 handlePageChange,
+                UpdateUserStatus,
             }}
         >
             {children}

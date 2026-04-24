@@ -4,7 +4,6 @@ const streamifier = require("streamifier");
 const AsyncErrorHandler = require("../Utils/AsyncErrorHandler");
 const CustomError = require("../Utils/CustomError");
 
-
 // Helper function para sa Cloudinary Stream Upload
 const uploadFromBuffer = (buffer) =>
   new Promise((resolve, reject) => {
@@ -17,6 +16,91 @@ const uploadFromBuffer = (buffer) =>
     );
     streamifier.createReadStream(buffer).pipe(stream);
   });
+
+exports.getSpecificBorrower = AsyncErrorHandler(async (req, res) => {
+  try {
+    const { rfidId } = req.params;
+
+    const borrower = await Borrower.aggregate([
+      {
+        $match: { rfidId: rfidId }
+      },
+      {
+        $lookup: {
+          from: "userloginschemas",
+          localField: "linkedId",
+          foreignField: "_id",
+          as: "linkedAccount"
+        }
+      },
+      {
+        $lookup: {
+          from: "equipments",
+          localField: "borrowedItems.itemId",
+          foreignField: "_id",
+          as: "borrowedEquipments"
+        }
+      },
+      {
+        $project: {
+          rfidId: 1,
+          contactNumber: 1,
+          address: 1,
+          borrowerType: 1,
+          status: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          "linkedAccount": { 
+            $arrayElemAt: ["$linkedAccount", 0] 
+          },
+          "borrowedItems": {
+            $map: {
+              input: "$borrowedItems",
+              as: "item",
+              in: {
+                borrowedDate: "$$item.borrowedDate",
+                returnDate: "$$item.returnDate",
+                status: "$$item.status",
+                equipment: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: "$borrowedEquipments",
+                        cond: { $eq: ["$$this._id", "$$item.itemId"] }
+                      }
+                    },
+                    0
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    ]);
+
+    if (!borrower || borrower.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Borrower not found with this RFID ID",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Borrower found successfully",
+      data: borrower[0],
+    });
+    
+  } catch (error) {
+    console.error("Error in getSpecificBorrower:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+});
 
 exports.registerBorrower = AsyncErrorHandler(async (req, res, next) => {
   try {
@@ -113,8 +197,7 @@ exports.registerBorrower = AsyncErrorHandler(async (req, res, next) => {
   }
 });
 
-// @desc Get all borrowers with laboratory + search + pagination
-exports.getAllBorrowers = AsyncErrorHandler(async (req, res, next) => {
+exports.getAllBorrowers = AsyncErrorHandler(async (req, res) => {
   try {
     let { page = 1, limit = 5, search = "" } = req.query;
 
@@ -126,16 +209,17 @@ exports.getAllBorrowers = AsyncErrorHandler(async (req, res, next) => {
     const searchFilter = search
       ? {
           $or: [
-            { firstName: { $regex: search, $options: "i" } },
-            { lastName: { $regex: search, $options: "i" } },
+            { "user.first_name": { $regex: search, $options: "i" } },
+            { "user.last_name": { $regex: search, $options: "i" } },
             { rfidId: { $regex: search, $options: "i" } },
             { contactNumber: { $regex: search, $options: "i" } },
           ],
         }
       : {};
 
-    // 🔢 MAIN PIPELINE
+    // 🔢 PIPELINE
     const pipeline = [
+      // 🏢 LABORATORY
       {
         $lookup: {
           from: "laboratories",
@@ -151,25 +235,52 @@ exports.getAllBorrowers = AsyncErrorHandler(async (req, res, next) => {
         },
       },
 
-      // 🔍 APPLY SEARCH
+      // 👤 USER (FIXED LINKEDID)
+      {
+        $lookup: {
+          from: "userloginschemas",
+          localField: "linkedId", // 🔥 FIXED HERE
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      {
+        $unwind: {
+          path: "$user",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // 🔍 SEARCH
       {
         $match: searchFilter,
       },
 
+      // 🔽 SORT
       {
         $sort: { createdAt: -1 },
       },
 
+      // 📤 OUTPUT
       {
         $project: {
-          firstName: 1,
-          lastName: 1,
+          // USER INFO
+          first_name: "$user.first_name",
+          last_name: "$user.last_name",
+          middleName: "$user.middle_name",
+          email: "$user.username",
+          suffix: "$user.suffix",
+          avatar: "$user.avatar",
+
+          // BORROWER INFO
           rfidId: 1,
           contactNumber: 1,
+          address: 1,
           borrowerType: 1,
           status: 1,
           createdAt: 1,
 
+          // LAB
           laboratoryId: 1,
           laboratoryName: "$laboratory.laboratoryName",
           laboratoryDescription: "$laboratory.description",
@@ -177,7 +288,7 @@ exports.getAllBorrowers = AsyncErrorHandler(async (req, res, next) => {
       },
     ];
 
-    // 🔢 COUNT TOTAL
+    // 🔢 COUNT
     const totalData = await Borrower.aggregate([
       ...pipeline,
       { $count: "total" },
@@ -186,7 +297,7 @@ exports.getAllBorrowers = AsyncErrorHandler(async (req, res, next) => {
     const total = totalData[0]?.total || 0;
     const totalPages = Math.ceil(total / limit);
 
-    // 📄 PAGINATION
+    // 📄 DATA
     const borrowers = await Borrower.aggregate([
       ...pipeline,
       { $skip: (page - 1) * limit },
@@ -213,41 +324,105 @@ exports.getAllBorrowers = AsyncErrorHandler(async (req, res, next) => {
   }
 });
 
-// @desc    Update borrower
 exports.updateBorrower = AsyncErrorHandler(async (req, res, next) => {
-  let borrower = await Borrower.findById(req.params.id);
-  if (!borrower) return next(new CustomError("Borrower not found", 404));
+  try {
+    const io = req.app.get("io");
 
-  // Kung may bagong file, i-upload at i-delete ang luma
-  if (req.file) {
-    // Delete old image from Cloudinary
-    if (borrower.avatar && borrower.avatar.public_id) {
-      await cloudinary.uploader.destroy(borrower.avatar.public_id);
+    let borrower = await Borrower.findById(req.params.id);
+    if (!borrower) return next(new CustomError("Borrower not found", 404));
+
+    // --- FIX 1: HANDLE AVATAR STRING FROM FRONTEND ---
+    // Kung ang avatar ay string (JSON), i-parse ito. Kung hindi, hayaan lang.
+    if (req.body.avatar && typeof req.body.avatar === "string") {
+      try {
+        req.body.avatar = JSON.parse(req.body.avatar);
+      } catch (e) {
+        // Kung hindi JSON string, baka empty string ito o maling format
+        console.log("Avatar parse skipped");
+      }
     }
-    // Upload new image
-    const uploadedResponse = await uploadFromBuffer(req.file.buffer);
-    req.body.avatar = {
-      public_id: uploadedResponse.public_id,
-      url: uploadedResponse.secure_url,
-    };
+
+    // --- FIX 2: FILE UPLOAD LOGIC ---
+    if (req.file && req.file.buffer) {
+      // Burahin ang lumang avatar sa Cloudinary kung meron
+      if (borrower.avatar && borrower.avatar.public_id) {
+        await cloudinary.uploader.destroy(borrower.avatar.public_id);
+      }
+
+      // Upload sa Cloudinary
+      const uploadedResponse = await uploadFromBuffer(req.file.buffer);
+
+      // I-update ang req.body gamit ang bagong Cloudinary data
+      req.body.avatar = {
+        public_id: uploadedResponse.public_id,
+        url: uploadedResponse.secure_url,
+      };
+    }
+
+    // --- UPDATE DATABASE ---
+    const updateData = { ...req.body };
+    const updatedBorrower = await Borrower.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true },
+    );
+
+    // --- AGGREGATION (Para sa Real-time UI) ---
+    const borrowerWithLab = await Borrower.aggregate([
+      { $match: { _id: updatedBorrower._id } },
+      {
+        $lookup: {
+          from: "laboratories",
+          localField: "laboratoryId",
+          foreignField: "_id",
+          as: "laboratory",
+        },
+      },
+      {
+        $unwind: {
+          path: "$laboratory",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          firstName: 1,
+          lastName: 1,
+          rfidId: 1,
+          contactNumber: 1,
+          borrowerType: 1,
+          status: 1,
+          createdAt: 1,
+          laboratoryId: 1,
+          laboratoryName: "$laboratory.laboratoryName",
+          laboratoryDescription: "$laboratory.description",
+          avatar: 1,
+        },
+      },
+    ]);
+
+    // Emit Socket Event
+    io.to("role:admin").emit("borrowerUpdated", {
+      payloads: borrowerWithLab,
+    });
+
+    res.status(200).json({
+      status: "success",
+      data: { borrower: borrowerWithLab[0] || updatedBorrower },
+    });
+  } catch (error) {
+    console.error("Update Borrower Error:", error);
+    // Proteksyon laban sa stream errors para hindi mag-crash ang app
+    if (!res.headersSent) {
+      res.status(500).json({
+        status: "error",
+        message:
+          error.message || "Something went wrong while updating borrower",
+      });
+    }
   }
-
-  const updatedBorrower = await Borrower.findByIdAndUpdate(
-    req.params.id,
-    req.body,
-    {
-      new: true,
-      runValidators: true,
-    },
-  );
-
-  res.status(200).json({
-    status: "success",
-    data: { borrower: updatedBorrower },
-  });
 });
 
-// @desc    Delete borrower
 exports.deleteBorrower = AsyncErrorHandler(async (req, res, next) => {
   const borrower = await Borrower.findById(req.params.id);
   if (!borrower) return next(new CustomError("Borrower not found", 404));
@@ -257,5 +432,6 @@ exports.deleteBorrower = AsyncErrorHandler(async (req, res, next) => {
   }
 
   await borrower.deleteOne();
+
   res.status(204).json({ status: "success", data: null });
 });

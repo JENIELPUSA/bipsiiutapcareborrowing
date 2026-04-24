@@ -3,12 +3,6 @@ const mongoose = require("mongoose");
 
 const EquipmentSchema = new mongoose.Schema(
   {
-    equipment: {
-      type: String,
-      required: [true, "Equipment name is required"],
-      trim: true,
-    },
-
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "category",

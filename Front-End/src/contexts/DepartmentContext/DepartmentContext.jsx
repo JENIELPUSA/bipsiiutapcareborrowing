@@ -90,37 +90,47 @@ export const DepartmentProvider = ({ children }) => {
 
     // UPDATE DEPARTMENT
     const updateDepartment = useCallback(
-        async (id, data) => {
+        async (id, formData) => {
             if (!authToken) return { success: false, error: "No authentication token" };
+            if (!id) return { success: false, error: "Department ID is undefined" };
 
             setIsLoading(true);
-
             try {
-                const res = await axios.put(`${backendURL}/api/v1/Department/${id}`, data, {
-                    withCredentials: true,
-                    headers: {
-                        Authorization: `Bearer ${authToken}`,
-                        "Content-Type": "application/json",
-                    },
-                });
+                const res = await axios.patch(
+                    `${backendURL}/api/v1/Department/${id}`,
+                    formData,
+                    {
+                        withCredentials: true,
+                        headers: {
+                            Authorization: `Bearer ${authToken}`,
+                            "Content-Type": "application/json",
+                        },
+                    }
+                );
 
-                if (res.data.success) {
-                    setDepartments((prev) => prev.map((dept) => (dept._id === id ? res.data.department : dept)));
+                if (res.data.success && res.data.data) {
+                    const updatedDept = res.data.data;
+
+                    setDepartments((prev) =>
+                        prev.map((dept) =>
+                            String(dept._id) === String(updatedDept._id) ? updatedDept : dept
+                        )
+                    );
 
                     return { success: true };
                 }
 
-                return { success: false, error: res.data.message };
-            } catch (error) {
-                const errorMsg = error.response?.data?.message || "Update failed";
+                return { success: false, error: res.data.message || "Update failed" };
+            } catch (err) {
+                const errorMsg = err.response?.data?.message || "Update failed";
+                console.error("Update Department Error:", errorMsg);
                 return { success: false, error: errorMsg };
             } finally {
                 setIsLoading(false);
             }
         },
-        [authToken, backendURL],
+        [authToken, backendURL]
     );
-
     // DELETE DEPARTMENT
     const deleteDepartment = useCallback(
         async (id) => {

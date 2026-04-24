@@ -48,32 +48,41 @@ exports.getByLinkId = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.markAsRead = AsyncErrorHandler(async (req, res) => {
-  const { id } = req.params;
-  const { linkId } = req.body;
+  const { notificationId, isRead } = req.body;
+  const userId = req.user.linkId;
+  const role = req.user.role;
 
-  if (!linkId) {
-    return res.status(400).json({ message: "linkId is required" });
+  console.log("Marking notification as read:", {
+    notificationId,
+    userId,
+    isRead,role
+  });
+
+  if (!notificationId) {
+    return res.status(400).json({ message: "notificationId is required" });
   }
 
-  const notification = await Notification.findById(id);
+  const notification = await Notification.findById(notificationId);
   if (!notification) {
     return res.status(404).json({ message: "Notification not found" });
   }
 
-  const viewer = notification.viewers.find((v) => v.user.toString() === linkId);
+  // ✅ update specific viewer only
+  const viewer = notification.viewers.find(
+    (v) => v.user.toString() === userId.toString(),
+  );
 
   if (!viewer) {
-    return res
-      .status(403)
-      .json({ message: "Not authorized to read this notification" });
+    return res.status(403).json({ message: "Not authorized" });
   }
 
-  if (!viewer.isRead) {
-    viewer.isRead = true;
-    await notification.save();
-  }
+  viewer.isRead = typeof isRead === "boolean" ? isRead : true;
 
-  res.status(200).json({ message: "Notification marked as read" });
+  await notification.save();
+
+  res.status(200).json({
+    message: "Notification updated successfully",
+  });
 });
 
 exports.DisplayNotification = AsyncErrorHandler(async (req, res) => {

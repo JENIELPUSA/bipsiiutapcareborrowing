@@ -13,7 +13,7 @@ router
   .route('/:id')
   .delete(authController.protect, NotificationController.deleteNotification);
 router
-  .patch('/:id/mark-read', authController.protect, NotificationController.markAsRead);
+  .patch('/mark-read', authController.protect, NotificationController.markAsRead);
 router
   .get('/getByLink/:linkId', authController.protect, NotificationController.getByLinkId);
 

@@ -2,59 +2,21 @@ const mongoose = require("mongoose");
 
 const borrowerSchema = new mongoose.Schema(
   {
-    avatar: {
-      url: String,
-      public_id: String,
-    },
-
     rfidId: {
       type: String,
       required: true,
       unique: true,
     },
-
-    firstName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    middleName: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-
-    lastName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-     suffix:{
-      type: String,
-      required: true,
-      trim: true,
-    },
-
     contactNumber: {
       type: String,
-      required: true,
       unique: true,
     },
-
-    email: {
-      type: String,
-      lowercase: true,
-      trim: true,
-    },
-
     address: {
       type: String,
-      required: true,
     },
-    laboratoryId:{ 
+    linkedId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Laboratory",
+      ref: "UserLoginSchema",
     },
 
     borrowerType: {

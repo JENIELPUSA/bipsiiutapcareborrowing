@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { 
-    Search, Beaker, FlaskConical, Trash2, 
-    ChevronRight, Info, X, Plus, Edit3, 
-    UserCircle, Building2 
+import {
+    Search, Beaker, FlaskConical, Trash2,
+    ChevronRight, Info, X, Plus, Edit3,
+    UserCircle, Building2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLaboratory } from "../../contexts/LaboratoryContext/laboratoryContext.jsx";
@@ -27,13 +27,11 @@ const LabManagement = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingLab, setEditingLab] = useState(null);
 
-    console.log("Laboratories:", laboratories);
-
     const [formData, setFormData] = useState({
         laboratoryName: "",
         description: "",
         status: "Operational",
-        role: "Admin", 
+        role: "Admin",
         departmentId: "",
     });
 
@@ -47,15 +45,17 @@ const LabManagement = () => {
 
     const handleOpenAdd = () => {
         setEditingLab(null);
-        setFormData({ 
-            laboratoryName: "", 
-            description: "", 
+        setFormData({
+            laboratoryName: "",
+            description: "",
             status: "Operational",
             role: "Admin",
-            departmentId: "" 
+            departmentId: ""
         });
         setIsModalOpen(true);
     };
+
+    console.log("laboratories", laboratories)
 
     const handleOpenEdit = (lab) => {
         setEditingLab(lab);
@@ -78,7 +78,7 @@ const LabManagement = () => {
             };
 
             if (editingLab) {
-                await updateLaboratory(editingLab.id, finalData);
+                await updateLaboratory(editingLab._id, finalData);
             } else {
                 await createLaboratory(finalData);
             }
@@ -90,7 +90,11 @@ const LabManagement = () => {
     };
 
     const handleDelete = async (id) => {
-        if (!id) return;
+        if (!id) {
+            console.error("No ID provided for deletion");
+            return;
+        }
+
         if (window.confirm("Remove this laboratory record?")) {
             try {
                 await deleteLaboratory(id);
@@ -109,7 +113,7 @@ const LabManagement = () => {
     }
 
     return (
-        <div className="mx-auto min-h-screen w-full max-w-7xl space-y-6 bg-slate-50 p-4 dark:bg-slate-950">
+        <div className="mx-auto min-h-screen w-full max-w-7xl space-y-6 p-4">
             {/* --- HEADER --- */}
             <div className="flex flex-col items-end justify-between gap-4 md:flex-row">
                 <div className="space-y-1">
@@ -143,19 +147,24 @@ const LabManagement = () => {
                 </div>
             </div>
 
-            {/* --- TABLE --- */}
-            <div className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-xl dark:border-slate-900 dark:bg-slate-950">
+            {/* --- TABLE - UPDATED UI (BiPSU Style) --- */}
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md dark:border-slate-700 dark:bg-slate-900">
                 <div className="overflow-x-auto">
-                    <table className="w-full border-separate border-spacing-0">
+                    <table className="w-full border-collapse">
                         <thead>
-                            <tr className="bg-slate-50/50 dark:bg-slate-900/50">
-                                <th className="border-b border-slate-100 px-8 py-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 dark:border-slate-900">Details</th>
-                                <th className="border-b border-slate-100 px-8 py-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 dark:border-slate-900">Description</th>
-                                <th className="border-b border-slate-100 px-8 py-6 text-center text-[10px] font-black uppercase tracking-widest text-slate-400 dark:border-slate-900">Status</th>
-                                <th className="border-b border-slate-100 px-8 py-6 text-right text-[10px] font-black uppercase tracking-widest text-slate-400 dark:border-slate-900">Actions</th>
+                            <tr className="bg-[#1e40af]">
+                                <th className="border border-[#1e3a8a] px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-white">
+                                    Laboratory Details
+                                </th>
+                                <th className="border border-[#1e3a8a] px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-white">
+                                    Description
+                                </th>
+                                <th className="border border-[#1e3a8a] px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-white">
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50 dark:divide-slate-900">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             <AnimatePresence mode="popLayout">
                                 {(laboratories || []).map((lab) => (
                                     <motion.tr
@@ -163,102 +172,181 @@ const LabManagement = () => {
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
-                                        key={lab.id}
-                                        className="group transition-all hover:bg-[#1e40af]/[0.03] dark:hover:bg-[#facc15]/[0.02]"
+                                        key={lab._id || lab.id}
+                                        className="group transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50"
                                     >
-                                        <td className="px-8 py-5">
+                                        <td className="border border-slate-200 px-6 py-4 align-top dark:border-slate-700">
                                             <div className="flex items-center gap-4">
-                                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1e40af] text-[#facc15]">
+                                                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-[#1e40af] to-blue-600 text-[#facc15] shadow-md">
                                                     <Beaker size={22} />
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-slate-800 dark:text-slate-100">{lab.laboratoryName}</p>
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase">Role: {lab.role}</p>
+                                                    <p className="font-bold text-slate-800 dark:text-slate-100">
+                                                        {lab.laboratoryName}
+                                                    </p>
+                                                    <div className="mt-1 inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[9px] font-black uppercase">
+                                                        {lab.role === "Admin" ? (
+                                                            <span className="text-blue-600">👑 ADMIN</span>
+                                                        ) : (
+                                                            <span className="text-amber-600">⚡ IN-CHARGE</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-5 text-sm italic text-slate-600 dark:text-slate-400">"{lab.description}"</td>
-                                        <td className="px-8 py-5 text-center">
-                                            <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase border-2 ${
-                                                lab.status === "Operational" ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-amber-50 text-amber-600 border-amber-100"
-                                            }`}>
-                                                {lab.status}
-                                            </span>
+                                        <td className="border border-slate-200 px-6 py-4 align-top dark:border-slate-700">
+                                            <p className="line-clamp-2 max-w-[300px] text-xs italic text-slate-500 dark:text-slate-400">
+                                                {lab.description || "No description provided"}
+                                            </p>
                                         </td>
-                                        <td className="px-8 py-5 text-right">
-                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => handleOpenEdit(lab)} className="p-2 text-slate-400 hover:text-[#1e40af]"><Edit3 size={18} /></button>
-                                                <button onClick={() => handleDelete(lab.id)} className="p-2 text-slate-400 hover:text-red-500"><Trash2 size={18} /></button>
-                                                <ChevronRight size={18} className="text-slate-300" />
+                                        <td className="border border-slate-200 px-6 py-4 text-center align-top dark:border-slate-700">
+                                            <div className="flex justify-center gap-2">
+                                                <button 
+                                                    onClick={() => handleOpenEdit(lab)} 
+                                                    className="p-1.5 text-slate-500 transition-colors hover:text-amber-600"
+                                                    title="Edit Laboratory"
+                                                >
+                                                    <Edit3 size={18} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleDelete(lab._id || lab.id)} 
+                                                    className="p-1.5 text-slate-500 transition-colors hover:text-red-600"
+                                                    title="Delete Laboratory"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
                                             </div>
                                         </td>
                                     </motion.tr>
                                 ))}
                             </AnimatePresence>
+                            {(!laboratories || laboratories.length === 0) && (
+                                <tr>
+                                    <td colSpan="4" className="py-20 text-center font-bold uppercase tracking-widest text-slate-400">
+                                        No laboratories found
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
 
-                {/* --- PAGINATION CONTROLS (BALIK NA!) --- */}
-                <div className="flex flex-col items-center justify-between gap-4 border-t border-slate-100 bg-slate-50/50 px-8 py-6 dark:border-slate-900 dark:bg-slate-900/30 md:flex-row">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                        Showing <span className="text-[#1e40af] dark:text-[#facc15]">{laboratories?.length || 0}</span> of {totalCategoryCount} Labs
+                {/* --- PAGINATION CONTROLS - UPDATED UI --- */}
+                <div className="flex flex-col items-center justify-between gap-4 border-t border-slate-200 bg-slate-50/50 px-6 py-4 dark:border-slate-700 dark:bg-slate-900/30 md:flex-row">
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
+                        Showing <span className="text-[#1e40af] dark:text-[#facc15]">{laboratories?.length || 0}</span> of{" "}
+                        <span className="text-slate-800 dark:text-slate-100">{totalCategoryCount || 0}</span> Laboratories
                     </p>
+
                     <div className="flex items-center gap-2">
                         <button
                             disabled={currentPage === 1}
                             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                            className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[10px] font-black uppercase disabled:opacity-30 dark:bg-slate-900 dark:border-slate-800"
+                            className="flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-wider text-slate-600 transition-all hover:bg-slate-50 disabled:opacity-30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
                         >
-                            Prev
+                            <ChevronRight size={12} className="rotate-180" /> Prev
                         </button>
+
                         <div className="flex gap-1">
-                            {[...Array(totalPages)].map((_, i) => (
-                                <button
-                                    key={i + 1}
-                                    onClick={() => setCurrentPage(i + 1)}
-                                    className={`h-10 w-10 rounded-xl text-[10px] font-black ${currentPage === i + 1 ? "bg-[#1e40af] text-white" : "bg-white text-slate-400 dark:bg-slate-900"}`}
-                                >
-                                    {i + 1}
-                                </button>
-                            ))}
+                            {[...Array(Math.min(totalPages, 5))].map((_, i) => {
+                                let pageNum;
+                                if (totalPages <= 5) {
+                                    pageNum = i + 1;
+                                } else if (currentPage <= 3) {
+                                    pageNum = i + 1;
+                                } else if (currentPage >= totalPages - 2) {
+                                    pageNum = totalPages - 4 + i;
+                                } else {
+                                    pageNum = currentPage - 2 + i;
+                                }
+                                
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => setCurrentPage(pageNum)}
+                                        className={`h-8 w-8 rounded-lg text-[9px] font-black transition-all ${
+                                            currentPage === pageNum
+                                                ? "bg-[#1e40af] text-white shadow-md"
+                                                : "bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                                        }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            })}
                         </div>
+
                         <button
                             disabled={currentPage === totalPages}
                             onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                            className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[10px] font-black uppercase disabled:opacity-30 dark:bg-slate-900 dark:border-slate-800"
+                            className="flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-wider text-slate-600 transition-all hover:bg-slate-50 disabled:opacity-30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
                         >
-                            Next
+                            Next <ChevronRight size={12} />
                         </button>
                     </div>
+
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
+                        Page <span className="text-[#1e40af] dark:text-[#facc15]">{currentPage}</span> of {totalPages || 1}
+                    </p>
                 </div>
             </div>
 
-            {/* --- MODAL --- */}
+            {/* --- MODAL - UPDATED UI --- */}
             <AnimatePresence>
                 {isModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" />
-                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="relative w-full max-w-lg rounded-[2.5rem] bg-white dark:bg-slate-900 overflow-hidden shadow-2xl">
-                            <div className="bg-[#1e40af] p-8 text-white flex justify-between items-center">
-                                <h3 className="text-xl font-black uppercase tracking-tighter">{editingLab ? "Edit" : "Register"} <span className="text-[#facc15]">Laboratory</span></h3>
-                                <button onClick={() => setIsModalOpen(false)}><X size={20} /></button>
+                        <motion.div 
+                            initial={{ opacity: 0 }} 
+                            animate={{ opacity: 1 }} 
+                            exit={{ opacity: 0 }} 
+                            onClick={() => setIsModalOpen(false)} 
+                            className="absolute inset-0 " 
+                        />
+                        <motion.div 
+                            initial={{ scale: 0.9, y: 20 }} 
+                            animate={{ scale: 1, y: 0 }} 
+                            exit={{ scale: 0.9, y: 20 }} 
+                            className="relative w-full max-w-lg overflow-hidden rounded-2xl border-b-[6px] border-[#facc15] bg-white shadow-2xl dark:bg-slate-900"
+                        >
+                            <div className="bg-[#1e40af] p-6 text-white">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-xl font-black uppercase tracking-tight">
+                                            {editingLab ? "Edit" : "Register"} <span className="text-[#facc15]">Laboratory</span>
+                                        </h3>
+                                        <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-white/50">
+                                            Fill out laboratory details
+                                        </p>
+                                    </div>
+                                    <button 
+                                        onClick={() => setIsModalOpen(false)} 
+                                        className="rounded-full p-2 transition-colors hover:bg-white/10"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                </div>
                             </div>
-                            
-                            <form onSubmit={handleSubmit} className="p-8 space-y-5">
+
+                            <form onSubmit={handleSubmit} className="space-y-4 p-6">
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-black uppercase text-slate-400">Laboratory Name</label>
-                                    <input required type="text" value={formData.laboratoryName} onChange={(e) => setFormData({ ...formData, laboratoryName: e.target.value })} className="w-full rounded-2xl border bg-slate-50 py-3.5 px-5 text-sm font-bold outline-none focus:ring-2 focus:ring-[#1e40af] dark:bg-slate-800 dark:text-white" />
+                                    <label className="ml-1 text-[10px] font-black uppercase text-slate-400">Laboratory Name</label>
+                                    <input 
+                                        required 
+                                        type="text" 
+                                        value={formData.laboratoryName} 
+                                        onChange={(e) => setFormData({ ...formData, laboratoryName: e.target.value })} 
+                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:border-[#1e40af] focus:ring-1 focus:ring-[#1e40af] dark:border-slate-700 dark:bg-slate-800 dark:text-white" 
+                                    />
                                 </div>
 
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-black uppercase text-slate-400">User Role</label>
+                                    <label className="ml-1 text-[10px] font-black uppercase text-slate-400">User Role</label>
                                     <div className="relative">
-                                        <UserCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                                        <UserCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                         <select
                                             value={formData.role}
                                             onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                                            className="w-full appearance-none rounded-2xl border bg-slate-50 py-3.5 pl-12 pr-5 text-sm font-bold outline-none focus:ring-2 focus:ring-[#1e40af] dark:bg-slate-800 dark:text-white"
+                                            className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 py-3 pl-12 pr-5 text-sm font-bold outline-none focus:border-[#1e40af] focus:ring-1 focus:ring-[#1e40af] dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                         >
                                             <option value="Admin">Admin</option>
                                             <option value="In-charge">In-charge</option>
@@ -268,19 +356,26 @@ const LabManagement = () => {
 
                                 <AnimatePresence>
                                     {formData.role === "In-charge" && (
-                                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-[#1e40af] dark:text-[#facc15]">Assign Department</label>
+                                        <motion.div 
+                                            initial={{ height: 0, opacity: 0 }} 
+                                            animate={{ height: "auto", opacity: 1 }} 
+                                            exit={{ height: 0, opacity: 0 }} 
+                                            className="space-y-1 overflow-hidden"
+                                        >
+                                            <label className="ml-1 text-[10px] font-black uppercase text-[#1e40af] dark:text-[#facc15]">Assign Department</label>
                                             <div className="relative">
                                                 <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-[#facc15]" size={18} />
                                                 <select
                                                     required={formData.role === "In-charge"}
                                                     value={formData.departmentId}
                                                     onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
-                                                    className="w-full appearance-none rounded-2xl border border-blue-100 bg-blue-50/30 py-3.5 pl-12 pr-5 text-sm font-bold outline-none dark:bg-slate-800"
+                                                    className="w-full appearance-none rounded-xl border border-blue-200 bg-blue-50/30 py-3 pl-12 pr-5 text-sm font-bold outline-none focus:border-[#1e40af] focus:ring-1 focus:ring-[#1e40af] dark:border-slate-700 dark:bg-slate-800"
                                                 >
                                                     <option value="">Select Department...</option>
                                                     {departments?.map((dept) => (
-                                                        <option key={dept.id || dept._id} value={dept.id || dept._id}>{dept.departmentName}</option>
+                                                        <option key={dept.id || dept._id} value={dept.id || dept._id}>
+                                                            {dept.departmentName}
+                                                        </option>
                                                     ))}
                                                 </select>
                                             </div>
@@ -289,11 +384,21 @@ const LabManagement = () => {
                                 </AnimatePresence>
 
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-black uppercase text-slate-400">Description</label>
-                                    <textarea required rows={3} value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full rounded-2xl border bg-slate-50 py-3.5 px-5 text-sm outline-none focus:ring-2 focus:ring-[#1e40af] dark:bg-slate-800 dark:text-white resize-none" />
+                                    <label className="ml-1 text-[10px] font-black uppercase text-slate-400">Description</label>
+                                    <textarea 
+                                        required 
+                                        rows={3} 
+                                        value={formData.description} 
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })} 
+                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[#1e40af] focus:ring-1 focus:ring-[#1e40af] dark:border-slate-700 dark:bg-slate-800 dark:text-white resize-none" 
+                                    />
                                 </div>
 
-                                <button type="submit" className="w-full py-4 rounded-2xl bg-[#facc15] text-[#1e40af] font-black uppercase text-xs shadow-lg hover:brightness-110 active:scale-95 transition-all">
+                                <button 
+                                    type="submit" 
+                                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#facc15] py-3.5 text-xs font-black uppercase tracking-widest text-[#1e40af] shadow-lg transition-all hover:brightness-105 active:scale-[0.98]"
+                                >
+                                    <FlaskConical size={16} />
                                     {editingLab ? "SAVE CHANGES" : "REGISTER FACILITY"}
                                 </button>
                             </form>

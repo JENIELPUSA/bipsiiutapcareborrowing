@@ -15,12 +15,14 @@ export const AuthProvider = ({ children }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [Designatedzone, setDesignatedzone] = useState(localStorage.getItem("Designatedzone") || null);
     const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
-
+    const [selectedUser, setSelectedUser] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalUsers, setTotalUsers] = useState(0);
+    const [CustomError, setCustomError] = useState();
     const [limit, setLimit] = useState(10);
     const [search, setSearch] = useState("");
+
     useEffect(() => {
         if (authToken) {
             axios.defaults.headers.common["Authorization"] = `Bearer ${authToken}`;
@@ -86,7 +88,6 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem("Designatedzone");
         localStorage.removeItem("authToken");
 
-        // Clear state
         setAuthToken(null);
         setRole(null);
         setEmail(null);
@@ -97,10 +98,9 @@ export const AuthProvider = ({ children }) => {
         setlinkId(null);
         setDesignatedzone(null);
 
-        // Remove Axios headers
         delete axios.defaults.headers.common["Authorization"];
 
-        window.location.href = "/login"; // Redirect to login page
+        window.location.href = "/login";
     };
 
     const fetchAllUsers = useCallback(
@@ -124,7 +124,6 @@ export const AuthProvider = ({ children }) => {
                     },
                 });
 
-                // I-adjust base sa actual response structure ng backend mo
                 const { data, totalUser, totalPages: resTotalPages, currentPage: resCurrentPage } = res.data;
 
                 setUsers(data || []);
@@ -139,6 +138,78 @@ export const AuthProvider = ({ children }) => {
         },
         [authToken],
     );
+
+    // ✅ AUTO-FETCH USERS kapag nagbago ang authToken, currentPage, limit, o search
+    useEffect(() => {
+        if (authToken) {
+            fetchAllUsers(currentPage, limit, search);
+        }
+    }, [authToken, currentPage, limit, search, fetchAllUsers]); // kasama ang fetchAllUsers para safe
+
+    const fetchUserById = useCallback(async () => {
+        if (!authToken) return;
+
+        try {
+            setIsLoading(true);
+
+            const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/authentication/getUserById`, {
+                headers: {
+                    Authorization: `Bearer ${authToken}`,
+                },
+                withCredentials: true,
+            });
+
+            if (res.data?.status) {
+                setSelectedUser(res.data.data);
+                return res.data.data;
+            }
+        } catch (error) {
+            console.error("Error fetching user:", error);
+            return null;
+        } finally {
+            setIsLoading(false);
+        }
+    }, [authToken]);
+
+    const UpdateUser = async (id, values) => {
+        try {
+            console.log("Values received in UpdateUser:", values);
+
+            const payload = values instanceof FormData ? values : new FormData();
+
+            if (!(values instanceof FormData)) {
+                Object.keys(values).forEach((key) => {
+                    if (key !== "avatar" && values[key] !== undefined && values[key] !== null) {
+                        payload.append(key, values[key]);
+                    }
+                });
+                if (values.avatar instanceof File) {
+                    payload.append("avatar", values.avatar);
+                }
+            }
+
+            const res = await axios.patch(
+                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/authentication/updateUser/${id}`,
+                payload,
+                {
+                    headers: {
+                        Authorization: `Bearer ${authToken}`,
+                    },
+                },
+            );
+
+            if (res.status === 200 || res.data.status === "success") {
+                if (typeof fetchBorrowers === "function") fetchBorrowers();
+                return { success: true };
+            }
+        } catch (error) {
+            console.error("Update Error Context:", error);
+            const message = error.response?.data?.message || "Update error.";
+            if (typeof setCustomError === "function") setCustomError(message);
+            return { success: false, error: message };
+        }
+    };
+
     return (
         <AuthContext.Provider
             value={{
@@ -161,6 +232,9 @@ export const AuthProvider = ({ children }) => {
                 totalPages,
                 totalUsers,
                 setCurrentPage,
+                selectedUser,
+                fetchUserById,
+                UpdateUser,
             }}
         >
             {children}
@@ -168,5 +242,4 @@ export const AuthProvider = ({ children }) => {
     );
 };
 
-// Custom hook to use context
 export const useAuth = () => useContext(AuthContext);

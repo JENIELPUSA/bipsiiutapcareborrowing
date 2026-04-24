@@ -1,11 +1,9 @@
-import React, { useContext, useState, useEffect } from "react";
-import { ToastContainer, toast } from "react-toastify";
-import { FaLock } from "react-icons/fa";
-import { motion } from "framer-motion";
-import "react-toastify/dist/ReactToastify.css";
-import { UpdateDisplayContext } from "../../contexts/UpdateContext/updateContext";
+import React, { useContext, useState } from "react";
+import { FaLock, FaTimes } from "react-icons/fa"; // Nagdagdag ng close icon
+import { motion, AnimatePresence } from "framer-motion";
+import { UpdateDisplayContext } from "../../contexts/UpdatePassword/UpdatePassword";
 
-const UpdatePassword = () => {
+const UpdatePassword = ({ isOpen, onClose }) => {
     const { UpdatePasswordData, customError, setCustomError } = useContext(UpdateDisplayContext);
 
     const [values, setValues] = useState({
@@ -15,16 +13,19 @@ const UpdatePassword = () => {
     });
 
     const [loading, setLoading] = useState(false);
+    const [localError, setLocalError] = useState("");
 
     const handleChange = (e) => {
         setValues({ ...values, [e.target.name]: e.target.value });
+        if (localError) setLocalError("");
+        if (customError) setCustomError("");
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (values.newPassword !== values.confirmNewPassword) {
-            toast.error("New password and confirm password do not match.");
+            setLocalError("New password and confirm password do not match.");
             return;
         }
 
@@ -34,145 +35,131 @@ const UpdatePassword = () => {
             if (typeof UpdatePasswordData === "function") {
                 await UpdatePasswordData(values);
             }
-            if (customError) {
-                toast.error(customError);
-                setCustomError("");
-                setValues({
-                    currentPassword: "",
-                    newPassword: "",
-                    confirmNewPassword: "",
-                });
-            } else {
-                setValues({
-                    currentPassword: "",
-                    newPassword: "",
-                    confirmNewPassword: "",
-                });
-            }
+            
+            // I-clear ang form at isara ang modal pagkatapos ng success
+            setValues({
+                currentPassword: "",
+                newPassword: "",
+                confirmNewPassword: "",
+            });
+            onClose(); // Auto-close sa success
+            
         } catch (error) {
-            toast.error("Something went wrong. Please try again.");
+            // Handle error
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        if (customError) {
-            toast.error(customError);
-            setCustomError("");
-        }
-    }, [customError, setCustomError]);
-
     return (
-        <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="w-full max-w-md rounded-xl bg-white dark:bg-gray-800 p-6 shadow-lg sm:p-8"
-            >
-                <div className="mb-6 text-center">
-                    <FaLock className="mx-auto mb-2 text-3xl text-blue-500 dark:text-blue-400" />
-                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Update Password</h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Enter your current and new password.</p>
-                </div>
+        <AnimatePresence>
+            {isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    {/* Backdrop / Overlay */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={onClose} // Isasara ang modal pag clinick sa labas
+                        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                    />
 
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-4">
-                        <label
-                            htmlFor="currentPassword"
-                            className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                        >
-                            Current Password
-                        </label>
-                        <input
-                            type="password"
-                            name="currentPassword"
-                            id="currentPassword"
-                            value={values.currentPassword}
-                            onChange={handleChange}
-                            placeholder="Enter your current password"
-                            required
-                            disabled={loading}
-                            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-50 px-4 py-2 focus:border-blue-500 focus:ring-blue-500 dark:focus:border-blue-400 dark:focus:ring-blue-400 disabled:opacity-50"
-                        />
-                    </div>
-
-                    <div className="mb-4">
-                        <label
-                            htmlFor="newPassword"
-                            className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                        >
-                            New Password
-                        </label>
-                        <input
-                            type="password"
-                            name="newPassword"
-                            id="newPassword"
-                            value={values.newPassword}
-                            onChange={handleChange}
-                            placeholder="Enter your new password"
-                            required
-                            disabled={loading}
-                            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-50 px-4 py-2 focus:border-blue-500 focus:ring-blue-500 dark:focus:border-blue-400 dark:focus:ring-blue-400 disabled:opacity-50"
-                        />
-                    </div>
-
-                    <div className="mb-4">
-                        <label
-                            htmlFor="confirmNewPassword"
-                            className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                        >
-                            Confirm New Password
-                        </label>
-                        <input
-                            type="password"
-                            name="confirmNewPassword"
-                            id="confirmNewPassword"
-                            value={values.confirmNewPassword}
-                            onChange={handleChange}
-                            placeholder="Confirm your new password"
-                            required
-                            disabled={loading}
-                            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-50 px-4 py-2 focus:border-blue-500 focus:ring-blue-500 dark:focus:border-blue-400 dark:focus:ring-blue-400 disabled:opacity-50"
-                        />
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="flex w-full items-center justify-center rounded-md bg-blue-600 dark:bg-blue-700 py-2 text-white transition duration-150 hover:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50"
+                    {/* Modal Content */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        className="relative w-full max-w-md rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-2xl sm:p-8"
                     >
-                        {loading ? (
-                            <svg
-                                className="h-5 w-5 animate-spin text-white"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                            >
-                                <circle
-                                    className="opacity-25"
-                                    cx="12"
-                                    cy="12"
-                                    r="10"
-                                    stroke="currentColor"
-                                    strokeWidth="4"
-                                />
-                                <path
-                                    className="opacity-75"
-                                    fill="currentColor"
-                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                                ></path>
-                            </svg>
-                        ) : (
-                            "Update Password"
-                        )}
-                    </button>
-                </form>
-            </motion.div>
+                        {/* Close Button */}
+                        <button
+                            onClick={onClose}
+                            className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                        >
+                            <FaTimes />
+                        </button>
 
-            <ToastContainer position="bottom-right" theme="colored" />
-        </div>
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+                                <FaLock className="text-xl text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Update Password</h2>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Please enter your details to continue.</p>
+                        </div>
+
+                        {(localError || customError) && (
+                            <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
+                                {localError || customError}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Current Password
+                                </label>
+                                <input
+                                    type="password"
+                                    name="currentPassword"
+                                    value={values.currentPassword}
+                                    onChange={handleChange}
+                                    required
+                                    disabled={loading}
+                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4 py-2.5 text-gray-900 dark:text-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all disabled:opacity-50"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    New Password
+                                </label>
+                                <input
+                                    type="password"
+                                    name="newPassword"
+                                    value={values.newPassword}
+                                    onChange={handleChange}
+                                    required
+                                    disabled={loading}
+                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4 py-2.5 text-gray-900 dark:text-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all disabled:opacity-50"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Confirm New Password
+                                </label>
+                                <input
+                                    type="password"
+                                    name="confirmNewPassword"
+                                    value={values.confirmNewPassword}
+                                    onChange={handleChange}
+                                    required
+                                    disabled={loading}
+                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4 py-2.5 text-gray-900 dark:text-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all disabled:opacity-50"
+                                />
+                            </div>
+
+                            <div className="pt-2">
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="flex w-full items-center justify-center rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-50"
+                                >
+                                    {loading ? (
+                                        <svg className="h-5 w-5 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                        </svg>
+                                    ) : (
+                                        "Update Password"
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>
     );
 };
 

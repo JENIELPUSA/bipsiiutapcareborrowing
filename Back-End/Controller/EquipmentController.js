@@ -1,40 +1,236 @@
-const Equipment = require("../Models/RegisterAssitsSchema");
 const AsyncErrorHandler = require("../Utils/AsyncErrorHandler");
+const mongoose = require("mongoose");
+const userloginSchema = require("../Models/LogInSchema");
+const Equipment = require("../Models/RegisterAssitsSchema");
+const EquipmentSchema = require("../Models/EnchargeBorroweSchema");
 
-// CREATE EQUIPMENT
+exports.getAllEquipment = async (req, res) => {
+  try {
+    const mongoose = require("mongoose");
+
+    const userId = new mongoose.Types.ObjectId(req.user._id);
+
+    let { page = 1, limit = 5, search = "" } = req.query;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    const skip = (page - 1) * limit;
+
+    // 📌 Base filter
+    const matchStage = {
+      incharge: userId,
+    };
+
+    // 🔍 Search filter
+    if (search) {
+      matchStage.$and = [
+        {
+          $or: [
+            { model: { $regex: search, $options: "i" } },
+            { brand: { $regex: search, $options: "i" } },
+            { serialNo: { $regex: search, $options: "i" } },
+          ],
+        },
+      ];
+    }
+
+    const pipeline = [
+      // 📦 FILTER EQUIPMENT BY INCHARGE
+      { $match: matchStage },
+
+      // 🔗 CHECK LOAN EQUIPMENT
+      {
+        $lookup: {
+          from: "loanequipments",
+          let: { equipmentId: "$_id" },
+          pipeline: [
+            { $unwind: "$equipmentIds" },
+
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    {
+                      $eq: ["$equipmentIds.assistsId", "$$equipmentId"],
+                    },
+                    { $in: ["$equipmentIds.status", ["Release", "In-Review"]] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: "loanMatch",
+        },
+      },
+
+      // 📊 SET STATUS
+      {
+        $addFields: {
+          status: {
+            $cond: [
+              { $gt: [{ $size: "$loanMatch" }, 0] },
+              "Not Available",
+              "Active",
+            ],
+          },
+        },
+      },
+
+      // 🧹 CLEAN OUTPUT
+      {
+        $project: {
+          loanMatch: 0,
+        },
+      },
+
+      // 📄 PAGINATION
+      { $skip: skip },
+      { $limit: limit },
+    ];
+
+    const equipments = await Equipment.aggregate(pipeline);
+
+    const totalAgg = await Equipment.aggregate([
+      { $match: matchStage },
+      { $count: "total" },
+    ]);
+
+    const total = totalAgg[0]?.total || 0;
+
+    return res.status(200).json({
+      success: true,
+      data: equipments,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error("❌ ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch equipments",
+      error: error.message,
+    });
+  }
+};
+
+exports.getDashboardCounts = AsyncErrorHandler(async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const role = req.user.role;
+
+    // 📌 filter per role
+    const baseMatch =
+      role === "in-charge"
+        ? { inchargeId: userId }
+        : {};
+
+  const [totalAdmins, totalReleased, totalPending, totalAssets] =
+  await Promise.all([
+    userloginSchema.countDocuments(),
+
+    EquipmentSchema.aggregate([
+      { $match: baseMatch },
+      { $unwind: "$equipmentIds" },
+      {
+        $match: {
+          "equipmentIds.status": "Release",
+        },
+      },
+      { $count: "total" },
+    ]).then((res) => res[0]?.total || 0),
+
+    EquipmentSchema.aggregate([
+      { $match: baseMatch },
+      { $unwind: "$equipmentIds" },
+      {
+        $match: {
+          "equipmentIds.status": "Pending",
+        },
+      },
+      { $count: "total" },
+    ]).then((res) => res[0]?.total || 0),
+
+
+    role === "admin"
+      ? Equipment.countDocuments()
+      : Equipment.countDocuments({
+          incharge: userId,
+        }),
+  ]);
+    console.log({
+      totalAdmins,
+      totalReleased,
+      totalPending,
+      totalAssets,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalAdmins,
+        totalReleased,
+        totalPending,
+        totalAssets,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // CREATE EQUIPMENT
 exports.createEquipment = AsyncErrorHandler(async (req, res, next) => {
   try {
+    const io = req.app.get("io"); // socket.io instance
     const { equipment, category, brand, model, serialNo, status } = req.body;
     const incharge = req.user._id;
 
-    console.log("--- Debugging Create Equipment ---");
-    console.log("Received Body:", req.body);
-    console.log("In-charge ID:", incharge);
-    // 2. Create and Save
     const newEquipment = new Equipment({
       equipment,
-      category, // Siguraduhin na valid ObjectId ito
+      category,
       brand,
       model,
       serialNo,
       status,
-      incharge, // Galing sa token/auth middleware
+      incharge,
     });
 
     const savedEquipment = await newEquipment.save();
 
-    // 3. Success Response
+    const populatedEquipment = await Equipment.findById(savedEquipment._id)
+      .populate("category", "categoryName")
+      .populate("incharge", "name email");
+
+    const payload = {
+      action: "add", // <-- mark as add
+      equipment: populatedEquipment, // equipment object
+      notification: {
+        message: `${req.user.name} added new equipment: ${populatedEquipment.equipment}`,
+        viewers: [
+          { role: "admin" }, // admins should see
+          { user: incharge }, // sender should see
+        ],
+      },
+    };
+    if (io) {
+      io.to(`user:${incharge}`).emit("equipment:added", payload);
+      io.to("role:admin").emit("equipment:added", payload);
+    }
+
     res.status(201).json({
       success: true,
       message: "Equipment registered successfully!",
-      data: savedEquipment,
+      data: populatedEquipment,
     });
   } catch (error) {
-    // DITO MO MAKIKITA ANG TOTOONG MALI SA TERMINAL MO
-    console.error("CRITICAL ERROR DURING SAVE:", error);
-
-    // I-handle ang Mongoose Duplicate Key Error (E11000)
+    console.error(error);
+    // handle duplicate / validation errors
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -42,8 +238,6 @@ exports.createEquipment = AsyncErrorHandler(async (req, res, next) => {
           "Duplicate key error: Ang ID o Serial Number ay exist na sa system.",
       });
     }
-
-    // I-handle ang Mongoose Validation Error (e.g. maling ObjectId format)
     if (error.name === "ValidationError" || error.name === "CastError") {
       return res.status(400).json({
         success: false,
@@ -53,7 +247,6 @@ exports.createEquipment = AsyncErrorHandler(async (req, res, next) => {
       });
     }
 
-    // Default error response
     res.status(500).json({
       success: false,
       message: "Internal Server Error",
@@ -62,58 +255,122 @@ exports.createEquipment = AsyncErrorHandler(async (req, res, next) => {
   }
 });
 
-// GET ALL EQUIPMENTS WITH SEARCH & PAGINATION
-exports.getAllEquipment = AsyncErrorHandler(async (req, res) => {
-  let { page = 1, limit = 5, search = "" } = req.query;
+exports.getEquipmentById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { showAll, limit = 5 } = req.query;
 
-  // Convert to number
-  page = parseInt(page);
-  limit = parseInt(limit);
+    // 1. Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid ID format",
+      });
+    }
 
-  // Build search query
-  const query = {};
-  if (search) {
-    // Example: search by name or serialNumber
-    query.$or = [
-      { name: { $regex: search, $options: "i" } }, // case-insensitive search by name
-      { serialNumber: { $regex: search, $options: "i" } }, // search by serialNumber
+    // 2. Build aggregation pipeline
+    const pipeline = [
+      {
+        $match: {
+          category: new mongoose.Types.ObjectId(id),
+        },
+      },
+      // LOOKUP PARA SA CATEGORY
+      {
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "category_info",
+        },
+      },
+      { $unwind: { path: "$category_info", preserveNullAndEmptyArrays: true } },
+
+      // LOOKUP PARA SA INCHARGE (UserLoginSchema)
+      {
+        $lookup: {
+          from: "userloginschemas",
+          localField: "incharge",
+          foreignField: "_id",
+          as: "incharge_info",
+        },
+      },
+      { $unwind: { path: "$incharge_info", preserveNullAndEmptyArrays: true } },
+
+      // LOOKUP PARA SA LABORATORY (Galing sa laboratoryId ng Incharge)
+      {
+        $lookup: {
+          from: "laboratories", // Base sa model "laboratory", ito ang collection name
+          localField: "incharge_info.laboratoryId",
+          foreignField: "_id",
+          as: "lab_info",
+        },
+      },
+      { $unwind: { path: "$lab_info", preserveNullAndEmptyArrays: true } },
+
+      // FINAL PROJECTION
+      {
+        $project: {
+          _id: 1,
+          brand: 1,
+          model: 1,
+          serialNo: 1,
+          status: 1,
+          category: {
+            _id: "$category_info._id",
+            categoryName: "$category_info.categoryName",
+          },
+          incharge: {
+            _id: "$incharge_info._id",
+            full_name: {
+              $concat: [
+                { $ifNull: ["$incharge_info.first_name", ""] },
+                " ",
+                { $ifNull: ["$incharge_info.last_name", ""] },
+              ],
+            },
+            username: "$incharge_info.username",
+            role: "$incharge_info.role",
+            // Laboratory Details
+            laboratory: {
+              _id: "$lab_info._id",
+              laboratoryName: "$lab_info.laboratoryName",
+              description: "$lab_info.description",
+            },
+          },
+        },
+      },
     ];
+
+    // 3. Apply limit
+    if (showAll !== "true") {
+      pipeline.push({
+        $limit: parseInt(limit),
+      });
+    }
+
+    const result = await Equipment.aggregate(pipeline);
+
+    if (!result || result.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No equipment found for this category",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: result.length,
+      data: result,
+    });
+  } catch (error) {
+    console.error("Aggregation Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
   }
-
-  // Count total matching documents
-  const total = await Equipment.countDocuments(query);
-
-  // Fetch paginated results
-  const equipments = await Equipment.find(query)
-    .populate("category") // populate category if needed
-    .sort({ createdAt: -1 })
-    .skip((page - 1) * limit)
-    .limit(limit);
-
-  res.status(200).json({
-    success: true,
-    data: equipments,
-    pagination: {
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    },
-  });
-});
-
-// GET EQUIPMENT BY ID
-exports.getEquipmentById = AsyncErrorHandler(async (req, res) => {
-  const equipment = await Equipment.findById(req.params.id).populate(
-    "category",
-  );
-  if (!equipment)
-    return res
-      .status(404)
-      .json({ success: false, message: "Equipment not found" });
-
-  res.status(200).json({ success: true, data: equipment });
-});
+};
 
 // UPDATE EQUIPMENT
 exports.updateEquipment = AsyncErrorHandler(async (req, res) => {

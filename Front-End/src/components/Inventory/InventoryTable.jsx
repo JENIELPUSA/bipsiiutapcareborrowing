@@ -6,21 +6,21 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const InventoryManagement = () => {
     // 1. Contexts
-    const { 
-        equipments, 
-        createEquipment, 
-        updateEquipment, 
+    const {
+        equipments,
+        createEquipment,
+        updateEquipment,
         deleteEquipment,
-        fetchEquipments, 
+        fetchEquipments,
         currentPage,
         setCurrentPage,
         totalPages,
         searchQuery,
         setSearchQuery,
         totalEquipmentCount,
-        isLoading 
+        isLoading
     } = useContext(EquipmentContext);
-    
+
     const { categoriesDropdown, fetchcategorydropdown } = useContext(CategoryContext);
 
     // 2. Local States
@@ -28,9 +28,10 @@ const InventoryManagement = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
 
+    console.log("Equipments in InventoryTable:", equipments);
+
     const initialFormState = {
-        equipment: "",
-        category: "", 
+        category: "",
         brand: "",
         model: "",
         serialNo: "",
@@ -48,16 +49,17 @@ const InventoryManagement = () => {
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
             setSearchQuery(searchTerm);
-            setCurrentPage(1); 
+            setCurrentPage(1);
         }, 500);
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm, setSearchQuery, setCurrentPage]);
 
+    // Auto-select first category if empty
     useEffect(() => {
         if (categoriesDropdown?.length > 0 && !formData.category) {
-            setFormData((prev) => ({ 
-                ...prev, 
-                category: categoriesDropdown[0]._id 
+            setFormData((prev) => ({
+                ...prev,
+                category: categoriesDropdown[0]._id
             }));
         }
     }, [categoriesDropdown, formData.category]);
@@ -67,24 +69,23 @@ const InventoryManagement = () => {
         setEditingItem(null);
         setFormData({
             ...initialFormState,
-            category: categoriesDropdown?.[0]?._id || "", 
+            category: categoriesDropdown?.[0]?._id || "",
         });
         setIsModalOpen(true);
     };
 
     const handleOpenEdit = (item) => {
         setEditingItem(item);
-        const parts = item.brandModel ? item.brandModel.split(" / ") : ["", ""];
-        
-        const categoryId = typeof item.category === 'object' 
-            ? item.category._id 
+
+        // Kunin ang ID ng category (maging object man ito o string galing sa API)
+        const categoryId = typeof item.category === 'object'
+            ? item.category._id
             : item.category;
 
         setFormData({
-            equipment: item.equipment || "",
-            category: categoryId,
-            brand: parts[0] || "",
-            model: parts[1] || "",
+            category: categoryId || "",
+            brand: item.brand || "",
+            model: item.model || "",
             serialNo: item.serialNo || "",
             status: item.status || "Active",
         });
@@ -93,6 +94,8 @@ const InventoryManagement = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Pinagsama para sa backend compatibility kung kailangan ng 'brandModel' field
         const finalData = {
             ...formData,
             brandModel: `${formData.brand} / ${formData.model}`,
@@ -123,9 +126,11 @@ const InventoryManagement = () => {
 
     const renderCategoryName = (categoryData) => {
         if (!categoryData) return "Uncategorized";
+        // Kung object ang category (gaya ng sa data mo)
         if (typeof categoryData === 'object' && categoryData.categoryName) {
             return categoryData.categoryName;
         }
+        // Kung ID lang ang dumarating, hanapin sa dropdown list
         const found = categoriesDropdown?.find(c => c._id === categoryData);
         return found ? found.categoryName : "Unknown";
     };
@@ -163,13 +168,13 @@ const InventoryManagement = () => {
                 </div>
             </div>
 
-            {/* --- TABLE WITH INTEGRATED PAGINATION --- */}
+            {/* --- TABLE --- */}
             <div className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-xl">
                 <div className="overflow-x-auto">
                     <table className="w-full border-separate border-spacing-0">
                         <thead>
                             <tr className="bg-slate-50/80">
-                                <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Equipment</th>
+                                <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Asset Name</th>
                                 <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Category</th>
                                 <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Brand / Model</th>
                                 <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Serial No</th>
@@ -181,13 +186,16 @@ const InventoryManagement = () => {
                             {equipments?.length > 0 ? (
                                 equipments.map((item) => (
                                     <tr key={item._id} className="group hover:bg-[#1e40af]/[0.02] transition-colors">
-                                        <td className="px-6 py-4 font-bold text-slate-700">{item.equipment}</td>
+                                        {/* Ginamit ang Brand + Model bilang fallback sa Asset Name */}
+                                        <td className="px-6 py-4 font-bold text-slate-700">{item.brand} {item.model}</td>
                                         <td className="px-6 py-4">
                                             <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase text-slate-500">
                                                 {renderCategoryName(item.category)}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-xs text-slate-600 italic">{item.brandModel}</td>
+                                        <td className="px-6 py-4 text-xs text-slate-600 italic">
+                                            {item.brand} / {item.model}
+                                        </td>
                                         <td className="px-6 py-4 font-mono text-xs text-slate-500">{item.serialNo}</td>
                                         <td className="px-6 py-4 text-center">
                                             <span className={`rounded-full border px-3 py-1 text-[9px] font-black uppercase ${item.status === "Active" ? "border-green-200 bg-green-50 text-green-600" : "border-amber-200 bg-amber-50 text-amber-600"}`}>
@@ -213,7 +221,7 @@ const InventoryManagement = () => {
                     </table>
                 </div>
 
-                {/* --- INTEGRATED PAGINATION FOOTER --- */}
+                {/* --- PAGINATION --- */}
                 <div className="flex flex-col items-center justify-between gap-4 border-t border-slate-50 bg-slate-50/50 px-8 py-4 md:flex-row">
                     <div className="flex flex-col items-center md:items-start">
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -230,27 +238,22 @@ const InventoryManagement = () => {
                         >
                             <ChevronLeft size={14} /> Prev
                         </button>
-                        
+
                         <div className="hidden sm:flex gap-1">
                             {[...Array(totalPages || 0)].map((_, i) => {
-                                // Simplified Pagination: Show first, last, and current neighbors
                                 if (i + 1 === 1 || i + 1 === totalPages || (i + 1 >= currentPage - 1 && i + 1 <= currentPage + 1)) {
                                     return (
                                         <button
                                             key={i + 1}
                                             onClick={() => setCurrentPage(i + 1)}
-                                            className={`h-10 w-10 rounded-xl text-[10px] font-black transition-all ${
-                                                currentPage === i + 1
+                                            className={`h-10 w-10 rounded-xl text-[10px] font-black transition-all ${currentPage === i + 1
                                                     ? "bg-[#1e40af] text-white shadow-md shadow-blue-200"
                                                     : "bg-white text-slate-400 border border-slate-100 hover:border-slate-300"
-                                            }`}
+                                                }`}
                                         >
                                             {i + 1}
                                         </button>
                                     );
-                                }
-                                if (i + 1 === currentPage - 2 || i + 1 === currentPage + 2) {
-                                    return <span key={i + 1} className="px-1 text-slate-300 pt-2">...</span>;
                                 }
                                 return null;
                             })}
@@ -286,38 +289,54 @@ const InventoryManagement = () => {
                                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                                         className="w-full rounded-2xl border border-slate-100 bg-slate-50 p-3 text-xs font-bold outline-none focus:ring-2 focus:ring-[#1e40af] transition-all"
                                     >
+                                        <option value="">Select Category</option>
                                         {categoriesDropdown?.map((cat) => (
                                             <option key={cat._id} value={cat._id}>{cat.categoryName}</option>
                                         ))}
                                     </select>
                                 </div>
 
-                                <div className="space-y-1 text-left">
-                                    <label className="text-[10px] font-black uppercase text-slate-400">Equipment Name</label>
-                                    <input required value={formData.equipment} onChange={(e) => setFormData({ ...formData, equipment: e.target.value })} className="w-full rounded-2xl bg-slate-50 border border-slate-100 p-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#1e40af]" />
-                                </div>
-
                                 <div className="grid grid-cols-2 gap-4 text-left">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black uppercase text-slate-400">Brand</label>
-                                        <input placeholder="Brand" value={formData.brand} onChange={(e) => setFormData({ ...formData, brand: e.target.value })} className="w-full rounded-2xl bg-slate-50 border border-slate-100 p-3 text-sm outline-none focus:ring-2 focus:ring-[#1e40af]" />
+                                        <input 
+                                            placeholder="e.g. ACER" 
+                                            value={formData.brand} 
+                                            onChange={(e) => setFormData({ ...formData, brand: e.target.value })} 
+                                            className="w-full rounded-2xl bg-slate-50 border border-slate-100 p-3 text-sm outline-none focus:ring-2 focus:ring-[#1e40af]" 
+                                        />
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black uppercase text-slate-400">Model</label>
-                                        <input placeholder="Model" value={formData.model} onChange={(e) => setFormData({ ...formData, model: e.target.value })} className="w-full rounded-2xl bg-slate-50 border border-slate-100 p-3 text-sm outline-none focus:ring-2 focus:ring-[#1e40af]" />
+                                        <input 
+                                            placeholder="e.g. ASPHIRE" 
+                                            value={formData.model} 
+                                            onChange={(e) => setFormData({ ...formData, model: e.target.value })} 
+                                            className="w-full rounded-2xl bg-slate-50 border border-slate-100 p-3 text-sm outline-none focus:ring-2 focus:ring-[#1e40af]" 
+                                        />
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4 text-left">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black uppercase text-slate-400">Serial No</label>
-                                        <input placeholder="Serial No" value={formData.serialNo} onChange={(e) => setFormData({ ...formData, serialNo: e.target.value })} className="w-full rounded-2xl bg-slate-50 border border-slate-100 p-3 text-sm font-mono outline-none focus:ring-2 focus:ring-[#1e40af]" />
+                                        <input 
+                                            placeholder="Serial No" 
+                                            value={formData.serialNo} 
+                                            onChange={(e) => setFormData({ ...formData, serialNo: e.target.value })} 
+                                            className="w-full rounded-2xl bg-slate-50 border border-slate-100 p-3 text-sm font-mono outline-none focus:ring-2 focus:ring-[#1e40af]" 
+                                        />
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black uppercase text-slate-400">Status</label>
-                                        <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full rounded-2xl bg-slate-50 border border-slate-100 p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-[#1e40af]">
+                                        <select 
+                                            value={formData.status} 
+                                            onChange={(e) => setFormData({ ...formData, status: e.target.value })} 
+                                            className="w-full rounded-2xl bg-slate-50 border border-slate-100 p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-[#1e40af]"
+                                        >
                                             <option value="Active">Active</option>
                                             <option value="Maintenance">Maintenance</option>
+                                            <option value="Retired">Retired</option>
                                         </select>
                                     </div>
                                 </div>

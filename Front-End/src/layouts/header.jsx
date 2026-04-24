@@ -1,210 +1,258 @@
-import { useContext, useState } from "react";
+import {
+    useContext,
+    useState,
+    useRef,
+    useEffect,
+    useMemo,
+    useCallback,
+} from "react";
 import { useTheme } from "@/hooks/use-theme";
-import { 
-    Bell, ChevronsLeft, Moon, Search, Sun, User, 
-    Settings, LogOut, Package, Clock, X, Mail, Shield 
-} from "lucide-react";
+import { Bell, ChevronsLeft, ChevronRight, Sun, Moon, UserCircle } from "lucide-react";
 import profileImg from "@/assets/profile-image.jpg";
-import PropTypes from "prop-types";
+
 import { AuthContext } from "../contexts/AuthContext";
-import { NotificationDisplayContext } from "../contexts/NotificationContext/NotificationContext.jsx";
+import { NotificationDisplayContext } from "../contexts/NotificationContext/NotificationContext";
+
+import { NotificationDropdown } from "../components/HeaderComponents/NotificationDropdown.jsx";
+import { ProfileDropdown } from "../components/HeaderComponents/ProfileDropdown.jsx";
+import { ProfileModal } from "../components/HeaderComponents/ProfileModal.jsx";
 
 export const Header = ({ collapsed, setCollapsed }) => {
-    const { logout, user } = useContext(AuthContext); // Kinuha ang 'user' info dito
-    const { notify } = useContext(NotificationDisplayContext);
+    const {
+        logout,
+        role,
+        linkId,
+        selectedUser,
+        fetchUserById,
+        user, // Sinisiguradong kinuha ang user mula sa context
+    } = useContext(AuthContext);
+
     const { theme, setTheme } = useTheme();
-    
+    const { notify, markNotificationAsRead, setNotify } =
+        useContext(NotificationDisplayContext);
+
+    const notificationsArray = Array.isArray(notify) ? notify : [];
+
+    // 🔥 ROLE CHECK
+    const isBorrower = role === "borrower";
+
+    // 🔄 AUTO FETCH USER
+    useEffect(() => {
+        if (fetchUserById) {
+            fetchUserById();
+        }
+    }, [fetchUserById]);
+
+    const profileUser = selectedUser || user;
+
+    // 🔔 UNREAD COUNT
+    const unreadCount = useMemo(() => {
+        if (!linkId) return 0;
+
+        return notificationsArray.filter((n) => {
+            const viewer = n.viewers?.find(
+                (v) => v.user?.toString() === linkId?.toString()
+            );
+            return viewer ? viewer.isRead === false : false;
+        }).length;
+    }, [notificationsArray, linkId]);
+
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(false); // State para sa Modal
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedProfile, setSelectedProfile] = useState(null);
 
-    const currentNotifications = notify || [];
+    const notificationRef = useRef(null);
+    const notificationButtonRef = useRef(null);
+    const profileRef = useRef(null);
+    const profileButtonRef = useRef(null);
+
+    // 🔔 TOGGLE NOTIFICATIONS
+    const handleNotificationToggle = useCallback(async () => {
+        const nextState = !isNotificationOpen;
+        setIsNotificationOpen(nextState);
+        setIsProfileOpen(false);
+
+        if (nextState && linkId) {
+            const unreadIds = notificationsArray
+                .filter((n) => {
+                    const viewer = n.viewers?.find(
+                        (v) => v.user?.toString() === linkId?.toString()
+                    );
+                    return viewer ? viewer.isRead === false : false;
+                })
+                .map((n) => n._id);
+
+            if (unreadIds.length > 0) {
+                await Promise.all(
+                    unreadIds.map((id) => markNotificationAsRead(id))
+                );
+            }
+        }
+    }, [
+        isNotificationOpen,
+        notificationsArray,
+        linkId,
+        markNotificationAsRead,
+    ]);
+
+    // 👤 PROFILE MODAL
+    const handleOpenProfileModal = useCallback(() => {
+        setSelectedProfile(profileUser);
+        setIsModalOpen(true);
+        setIsProfileOpen(false);
+    }, [profileUser]);
+
+    // 🚪 OUTSIDE CLICK
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (
+                notificationRef.current &&
+                !notificationRef.current.contains(e.target) &&
+                notificationButtonRef.current &&
+                !notificationButtonRef.current.contains(e.target)
+            ) {
+                setIsNotificationOpen(false);
+            }
+
+            if (
+                profileRef.current &&
+                !profileRef.current.contains(e.target) &&
+                profileButtonRef.current &&
+                !profileButtonRef.current.contains(e.target)
+            ) {
+                setIsProfileOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () =>
+            document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    // HELPERS
+    const getFullName = () => profileUser?.first_name || "User";
+    const getAvatarUrl = () =>
+        profileUser?.avatar?.url || profileImg;
+    const getRole = () => profileUser?.role || "Staff";
 
     return (
-        <header className="relative z-10 flex h-[60px] items-center justify-between border-b-2 border-yellow-400 bg-white px-4 shadow-sm transition-colors dark:border-blue-700 dark:bg-slate-900">
-            {/* LEFT SECTION */}
-            <div className="flex items-center gap-x-3">
-                <button
-                    className="flex size-10 items-center justify-center rounded-full text-blue-700 hover:bg-blue-50 dark:text-yellow-400 dark:hover:bg-slate-800"
-                    onClick={() => setCollapsed(!collapsed)}
-                >
-                    <ChevronsLeft className={collapsed ? "rotate-180" : "transition-transform"} />
-                </button>
+        <header className="relative z-20 flex h-[70px] items-center justify-between border-b-[3px] border-[#facc15] bg-white px-6 shadow-md dark:bg-slate-900">
 
-                <div className="flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5 dark:bg-slate-800">
-                    <Search size={18} className="text-blue-700 dark:text-yellow-400" />
-                    <input
-                        type="text"
-                        placeholder="Search equipment..."
-                        className="w-40 bg-transparent text-sm outline-0 dark:text-white md:w-64"
-                    />
+            {/* LEFT SECTION */}
+            <div className="flex items-center gap-x-4">
+
+                {/* COLLAPSE BUTTON (HIDDEN IF BORROWER) */}
+                {!isBorrower && (
+                    <button
+                        className="flex h-10 w-10 items-center justify-center rounded-xl text-[#1e40af] transition-colors hover:bg-[#1e40af]/10 dark:text-[#facc15]"
+                        onClick={() => setCollapsed(!collapsed)}
+                    >
+                        <ChevronsLeft
+                            className={`h-5 w-5 transition-transform duration-300 ${
+                                collapsed ? "rotate-180" : ""
+                            }`}
+                        />
+                    </button>
+                )}
+
+                <div className="hidden md:block">
+                    <h1 className="text-sm font-black uppercase tracking-wider text-slate-400">
+                        Equipment{" "}
+                        <span className="text-[#1e40af] dark:text-blue-400">
+                            Borrowing System
+                        </span>
+                    </h1>
                 </div>
             </div>
 
             {/* RIGHT SECTION */}
-            <div className="flex items-center gap-x-4">
-                {/* Notification Dropdown (Same as your code) */}
+            <div className="flex items-center gap-x-3">
+                
+                {/* NOTIFICATION BELL (HIDDEN IF BORROWER) */}
+                {!isBorrower && (
+                    <div className="relative">
+                        <button
+                            ref={notificationButtonRef}
+                            onClick={handleNotificationToggle}
+                            className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-all hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                        >
+                            <Bell size={20} />
+
+                            {unreadCount > 0 && (
+                                <span className="absolute right-2 top-2 flex h-2.5 w-2.5">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500 dark:border-slate-800"></span>
+                                </span>
+                            )}
+                        </button>
+
+                        <NotificationDropdown
+                            isOpen={isNotificationOpen}
+                            dropdownRef={notificationRef}
+                            notifications={notificationsArray}
+                            linkId={linkId}
+                            markNotificationAsRead={markNotificationAsRead}
+                            setNotify={setNotify}
+                        />
+                    </div>
+                )}
+
+                {/* PROFILE SECTION */}
                 <div className="relative">
                     <button
-                        className="flex size-10 items-center justify-center rounded-full text-blue-700 hover:bg-blue-50 dark:text-slate-300 dark:hover:bg-slate-800"
-                        onClick={() => {
-                            setIsNotificationOpen(!isNotificationOpen);
-                            setIsProfileOpen(false);
-                        }}
-                    >
-                        <Bell size={20} />
-                        {currentNotifications.length > 0 && (
-                            <span className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white ring-2 ring-white">
-                                {currentNotifications.length}
-                            </span>
-                        )}
-                    </button>
-
-                    {isNotificationOpen && (
-                        <div className="animate-in fade-in slide-in-from-top-2 absolute right-0 mt-3 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl duration-200 dark:border-slate-700 dark:bg-slate-800">
-                            <div className="flex items-center justify-between bg-blue-700 px-4 py-3 dark:bg-slate-950">
-                                <h3 className="text-xs font-bold uppercase tracking-widest text-yellow-400">Inventory Requests</h3>
-                            </div>
-                            <div className="max-h-[350px] overflow-y-auto">
-                                {currentNotifications.length === 0 ? (
-                                    <div className="p-8 text-center text-sm text-slate-400">No pending requests</div>
-                                ) : (
-                                    currentNotifications.map((notif) => (
-                                        <div key={notif._id} className="border-b border-slate-50 p-4 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50">
-                                            <div className="flex items-start gap-3">
-                                                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-slate-700">
-                                                    <Package size={18} />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 leading-tight">{notif.message}</p>
-                                                    <div className="mt-2 flex w-fit items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300">
-                                                        <Clock size={12} />
-                                                        {new Date(notif.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Avatar / Profile Dropdown */}
-                <div className="relative">
-                    <button
-                        className="flex items-center gap-2 rounded-full border border-slate-200 p-0.5 pr-3 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                        ref={profileButtonRef}
                         onClick={() => {
                             setIsProfileOpen(!isProfileOpen);
                             setIsNotificationOpen(false);
                         }}
+                        className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-2 py-1 transition-all hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800"
                     >
-                        <div className="size-8 overflow-hidden rounded-full border-2 border-yellow-400">
-                            <img src={profileImg} alt="user" className="size-full object-cover" />
+                        <div className="h-8 w-8 overflow-hidden rounded-lg bg-gradient-to-br from-[#1e40af] to-blue-600 p-0.5">
+                            <div className="h-full w-full overflow-hidden rounded-md bg-white">
+                                <img
+                                    src={getAvatarUrl()}
+                                    className="h-full w-full object-cover"
+                                    alt="Profile"
+                                />
+                            </div>
                         </div>
-                        <span className="hidden text-sm font-bold text-slate-700 dark:text-slate-200 md:block">
-                            {user?.username || "Borrower Admin"}
-                        </span>
+
+                        <div className="hidden text-left md:block">
+                            <p className="text-xs font-black uppercase text-slate-700 dark:text-slate-200">
+                                {getFullName()}
+                            </p>
+                            <p className="text-[9px] font-medium uppercase text-slate-400">
+                                {getRole()}
+                            </p>
+                        </div>
+
+                        <ChevronRight
+                            size={14}
+                            className={`text-slate-400 transition-transform duration-300 ${
+                                isProfileOpen ? "rotate-90" : ""
+                            }`}
+                        />
                     </button>
 
-                    {isProfileOpen && (
-                        <div className="animate-in fade-in slide-in-from-top-2 absolute right-0 mt-3 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl duration-200 dark:border-slate-700 dark:bg-slate-800">
-                            <div className="bg-slate-50 p-4 text-center dark:bg-slate-700/30">
-                                <p className="text-sm font-bold text-blue-900 dark:text-white">{user?.role || "Admin Officer"}</p>
-                                <p className="text-[10px] text-slate-500">{user?.email || "Inventory Management"}</p>
-                            </div>
-                            <div className="p-1">
-                                {/* DITO ANG PAG-CLICK PARA SA MODAL */}
-                                <button 
-                                    onClick={() => {
-                                        setIsModalOpen(true);
-                                        setIsProfileOpen(false);
-                                    }}
-                                    className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-slate-700"
-                                >
-                                    <User size={16} /> Profile Info
-                                </button>
-
-                                <button
-                                    onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-                                    className="flex w-full items-center justify-between rounded-lg px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-slate-700"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
-                                        <span>{theme === "light" ? "Dark Mode" : "Light Mode"}</span>
-                                    </div>
-                                    <div className="h-4 w-8 rounded-full bg-slate-200 p-0.5 dark:bg-blue-600">
-                                        <div className={`h-3 w-3 rounded-full bg-white transition-transform ${theme === "dark" ? "translate-x-4" : "translate-x-0"}`} />
-                                    </div>
-                                </button>
-
-                                <div className="my-1 border-t border-slate-100 dark:border-slate-700"></div>
-                                <button onClick={logout} className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-sm font-bold text-red-500 transition-colors hover:bg-red-50">
-                                    <LogOut size={16} /> Sign Out
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    <ProfileDropdown
+                        isOpen={isProfileOpen}
+                        dropdownRef={profileRef}
+                        user={profileUser}
+                        theme={theme}
+                        setTheme={setTheme}
+                        onOpenProfile={handleOpenProfileModal}
+                        onLogout={logout}
+                    />
                 </div>
             </div>
 
-            {/* --- USER INFO POPUP MODAL --- */}
-            {isModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="animate-in zoom-in-95 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900">
-                        {/* Modal Header */}
-                        <div className="relative h-24 bg-blue-700 dark:bg-blue-900">
-                            <button 
-                                onClick={() => setIsModalOpen(false)}
-                                className="absolute right-3 top-3 rounded-full bg-black/20 p-1 text-white hover:bg-black/40"
-                            >
-                                <X size={20} />
-                            </button>
-                            <div className="absolute -bottom-10 left-6">
-                                <div className="size-20 overflow-hidden rounded-2xl border-4 border-white bg-slate-200 dark:border-slate-900">
-                                    <img src={profileImg} alt="User" className="size-full object-cover" />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Modal Body */}
-                        <div className="px-6 pb-6 pt-12">
-                            <div className="mb-4">
-                                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                                    {user?.username || "Admin Officer"}
-                                </h2>
-                                <span className="inline-block rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                                    {user?.role || "System Administrator"}
-                                </span>
-                            </div>
-
-                            <div className="space-y-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-                                <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
-                                    <Mail size={18} className="text-blue-600" />
-                                    <span>{user?.email || "admin@system.com"}</span>
-                                </div>
-                                <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
-                                    <Shield size={18} className="text-blue-600" />
-                                    <span>Access Level: <b className="text-slate-800 dark:text-slate-200">Full Access</b></span>
-                                </div>
-                            </div>
-
-                            <button 
-                                onClick={() => setIsModalOpen(false)}
-                                className="mt-6 w-full rounded-xl bg-blue-700 py-2.5 font-bold text-white transition-transform hover:scale-[1.02] active:scale-95"
-                            >
-                                Close Profile
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* PROFILE MODAL */}
+            <ProfileModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                user={selectedProfile}
+            />
         </header>
     );
-};
-
-Header.propTypes = {
-    collapsed: PropTypes.bool,
-    setCollapsed: PropTypes.func,
 };

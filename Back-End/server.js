@@ -62,13 +62,13 @@ global.connectedUsers = {};
 io.on("connection", (socket) => {
   console.log(`🔌 New Connection: ${socket.id}`);
 
-  // Ito ang sasalo ng data galing sa bridge.py ng Desktop mo
+  // RFID Scanner
   socket.on("rfid-scanned", (data) => {
     console.log("UID received from Remote Desktop:", data.uid);
-    // I-broadcast sa Frontend Dashboard
     io.emit("rfid-scanned", { ...data, timestamp: new Date() });
   });
 
+  // REGISTER USER
   socket.on("register-user", (userId, role) => {
     if (!userId) {
       return console.log("⚠️ Registration failed: No User ID provided");
@@ -83,84 +83,38 @@ io.on("connection", (socket) => {
       socket.join("admin-incharge-shared");
       socket.join("role:admin");
       socket.join(`private:admin:${userId}`);
-
       console.log(`🛡️ ADMIN Joined: ${userId}`);
     } else if (role === "in-charge") {
       socket.join("admin-incharge-shared");
       socket.join("role:in-charge");
       socket.join(`private:in-charge:${userId}`);
-
       console.log(`📋 IN-CHARGE Joined: ${userId}`);
-    } else if (role === "rescuer") {
-      socket.join("role:rescuer");
-      console.log(`🚑 RESCUER Joined: ${userId}`);
     }
   });
 
-  // ==========================================
-  // RESCUER LOCATION UPDATE
-  // ==========================================
-  socket.on("rescuer:location", async (data) => {
-    const { latitude, longitude } = data;
-    const { userId, role } = socket;
-
-    if (!userId || role !== "rescuer") return;
-
-    try {
-      const updatedRescuer = await loginSchema
-        .findOneAndUpdate(
-          { userId: userId },
-          {
-            $set: {
-              status: "online",
-              currentlocation: {
-                latitude: parseFloat(latitude),
-                longitude: parseFloat(longitude),
-              },
-              updatedAt: new Date(),
-            },
-          },
-          { new: true },
-        )
-        .populate("userId", "fullName contactNumber");
-
-      if (updatedRescuer?.userId) {
-        const payload = {
-          userId: userId,
-          name: updatedRescuer.userId.fullName,
-          latitude: parseFloat(latitude),
-          longitude: parseFloat(longitude),
-          organization: updatedRescuer.organization || "Sagip Bayan Unit",
-          timestamp: new Date(),
-        };
-
-        io.to("admin-incharge-shared").emit("update:rescuer-location", payload);
-
-        console.log(
-          `📡 GPS: ${updatedRescuer.userId.fullName} broadcasting location`,
-        );
-      }
-    } catch (err) {
-      console.error("❌ DB Error:", err.message);
-    }
-  });
-
-  // ==========================================
-  // PRIVATE MESSAGES
-  // ==========================================
   socket.on("admin:send-to-incharge", (targetUserId, messageData) => {
     if (socket.role !== "admin") return;
-
-    io.to(`private:in-charge:${targetUserId}`).emit(
-      "private-alert",
-      messageData,
-    );
+    io.to(`private:in-charge:${targetUserId}`).emit("private-alert", messageData);
   });
 
   socket.on("incharge:send-to-admin", (targetUserId, messageData) => {
     if (socket.role !== "in-charge") return;
-
     io.to(`private:admin:${targetUserId}`).emit("private-alert", messageData);
+  });
+
+  // ==========================================
+  // EQUIPMENT UPDATE (Admin & In-Charge logic)
+  // ==========================================
+  socket.on("updatestatusequipment:send", (payload) => {
+    const inchargeId = payload.loan?.inchargeId;
+
+    // 🔹 Admins get all updates
+    io.to("role:admin").emit("updatestatusequipment:update", payload);
+
+    // 🔹 In-charge sender only
+    if (inchargeId) {
+      io.to(`user:${inchargeId}`).emit("updatestatusequipment:update", payload);
+    }
   });
 
   // ==========================================
@@ -174,7 +128,7 @@ io.on("connection", (socket) => {
         try {
           await loginSchema.findOneAndUpdate(
             { userId: socket.userId },
-            { $set: { status: "offline" } },
+            { $set: { status: "offline" } }
           );
 
           console.log(`💤 Rescuer ${socket.userId} OFFLINE`);

@@ -1,11 +1,14 @@
 const Category = require("../Models/categorySchema");
 const Equipment = require("../Models/RegisterAssitsSchema");
+const LoanEquipment = require("../Models/EnchargeBorroweSchema");
 
 exports.getAllCategory = async (req, res) => {
   try {
     let { page = 1, limit = 10, search = "" } = req.query;
+
     page = parseInt(page);
     limit = parseInt(limit);
+
     search = search.replace(/\+/g, " ");
 
     const matchStage = search
@@ -17,41 +20,99 @@ exports.getAllCategory = async (req, res) => {
         }
       : {};
 
-    // 1. Kunin lahat ng categories with pagination
+    const skip = (page - 1) * limit;
+
+    // 📦 CATEGORIES
     const categories = await Category.find(matchStage)
-      .sort({ created_at: -1 })
-      .skip((page - 1) * limit)
+      .skip(skip)
       .limit(limit);
 
-    // 2. Para sa bawat category, bilangin ang equipment
-    const categoriesWithCount = await Promise.all(
-      categories.map(async (cat) => {
-        const count = await Equipment.countDocuments({ category: cat._id });
-        return {
-          ...cat.toObject(),
-          equipmentCount: count,
-        };
-      })
+    // 🔥 LOANS (CLEAN FIX)
+    const loaned = await LoanEquipment.aggregate([
+      { $unwind: "$equipmentIds" },
+
+      {
+        $match: {
+          "equipmentIds.status": {
+            $in: ["Release", "Pending"],
+          },
+        },
+      },
+
+      // 🚨 REMOVE NULL FIX
+      {
+        $match: {
+          "equipmentIds.assistsId": { $ne: null },
+        },
+      },
+
+      {
+        $project: {
+          equipmentId: {
+            $toString: "$equipmentIds.assistsId",
+          },
+        },
+      },
+    ]);
+
+    const borrowedSet = new Set(
+      loaned
+        .map(l => l.equipmentId)
+        .filter(Boolean) 
     );
+    const equipments = await Equipment.find({})
+      .select("_id category");
+
+    const grouped = {};
+
+    for (const eq of equipments) {
+      const catId = eq.category.toString();
+
+      if (!grouped[catId]) {
+        grouped[catId] = [];
+      }
+
+      grouped[catId].push(eq._id.toString());
+    }
+
+    // 🔥 BUILD RESPONSE
+    const result = categories.map(cat => {
+      const eqList =
+        grouped[cat._id.toString()] || [];
+
+      const hasBorrowed = eqList.some(id =>
+        borrowedSet.has(id)
+      );
+
+      return {
+        ...cat.toObject(),
+        equipmentCount: eqList.length,
+        status: hasBorrowed
+          ? "Not Available"
+          : "Available",
+      };
+    });
 
     const totalCategories = await Category.countDocuments(matchStage);
-    const totalPages = Math.ceil(totalCategories / limit);
 
     res.status(200).json({
       success: true,
-      data: categoriesWithCount,
+      data: result,
       pagination: {
         totalCategories,
-        totalPages,
+        totalPages: Math.ceil(totalCategories / limit),
         currentPage: page,
         limit,
       },
     });
+
   } catch (error) {
-    console.error("Get Categories Error:", error);
+    console.error("ERROR:", error);
+
     res.status(500).json({
       success: false,
       message: "Server Error",
+      error: error.message,
     });
   }
 };

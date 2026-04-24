@@ -30,17 +30,15 @@ const UserLoginSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: {
     type: String,
-    enum: ["admin", "in-charge"],
+    enum: ["admin", "in-charge", "borrower"],
     required: true,
     lowercase: true,
   },
+  passwordisplay: { type: String},
 
-  otp: { type: String },
-  otpExpiresAt: { type: Date },
-  isVerified: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
-
+  status: { type: String, enum: ["Active", "In-Active"], default: "Active" },
   confirmPassword: {
     type: String,
     require: [true, "Please confirm your password"],

@@ -14,7 +14,7 @@ const DepartmentManagement = () => {
         setCurrentPage,
         totalPages,
         totalDepartmentCount,
-        setSearchQuery,
+        setSearchQuery
     } = useDepartment();
 
     const [searchTerm, setSearchTerm] = useState("");
@@ -51,7 +51,6 @@ const DepartmentManagement = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         const payload = { departmentName: formData.departmentName };
-
         try {
             if (editingDept) {
                 await updateDepartment(editingDept._id, payload);
@@ -86,7 +85,7 @@ const DepartmentManagement = () => {
     }
 
     return (
-        <div className="mx-auto min-h-screen w-full max-w-7xl space-y-6 bg-slate-50 p-4 dark:bg-slate-950">
+        <div className="mx-auto min-h-screen w-full max-w-7xl space-y-6 p-4">
             {/* --- HEADER SECTION --- */}
             <div className="flex flex-col items-end justify-between gap-4 md:flex-row">
                 <div className="space-y-1">
@@ -115,7 +114,7 @@ const DepartmentManagement = () => {
                     </div>
                     <button
                         onClick={handleOpenAdd}
-                        className="group flex items-center gap-2 whitespace-nowrap rounded-2xl bg-[#1e40af] px-6 py-3 text-xs font-black text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-[#1e3a8a] active:scale-95"
+                        className="group flex items-center gap-2 whitespace-nowrap rounded-2xl bg-[#1e40af] px-6 py-3 text-xs font-black text-white shadow-lg transition-all hover:bg-[#1e3a8a] active:scale-95"
                     >
                         <Building2
                             size={18}
@@ -126,97 +125,140 @@ const DepartmentManagement = () => {
                 </div>
             </div>
 
-            {/* --- TABLE SECTION --- */}
-            <div className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-xl shadow-slate-200/50 dark:border-slate-900 dark:bg-slate-950 dark:shadow-none">
+            {/* --- TABLE SECTION - UPDATED UI (BiPSU Style) --- */}
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md dark:border-slate-700 dark:bg-slate-900">
                 <div className="overflow-x-auto">
-                    <table className="w-full border-separate border-spacing-0">
+                    <table className="w-full border-collapse">
                         <thead>
-                            <tr className="bg-slate-50/50 dark:bg-slate-900/50">
-                                <th className="border-b border-slate-100 px-8 py-6 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 dark:border-slate-900">
+                            <tr className="bg-[#1e40af]">
+                                <th className="border border-[#1e3a8a] px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-white">
                                     Department Name & Info
                                 </th>
-                                <th className="border-b border-slate-100 px-8 py-6 text-right text-[10px] font-black uppercase tracking-widest text-slate-400 dark:border-slate-900">
+                                <th className="border border-[#1e3a8a] px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-white">
                                     Actions
                                 </th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50 dark:divide-slate-900">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             <AnimatePresence mode="popLayout">
                                 {(departments || []).map((dept) => (
                                     <motion.tr
                                         layout
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
                                         key={dept._id}
-                                        className="group transition-all hover:bg-[#1e40af]/[0.03] dark:hover:bg-[#facc15]/[0.02]"
+                                        className="group transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50"
                                     >
-                                        <td className="px-8 py-5">
+                                        <td className="border border-slate-200 px-6 py-4 align-top dark:border-slate-700">
                                             <div className="flex items-center gap-4">
-                                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#1e40af] to-[#3b82f6] text-[#facc15] shadow-inner">
+                                                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-[#1e40af] to-blue-600 text-[#facc15] shadow-md">
                                                     <LayoutGrid size={22} />
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-slate-800 transition-colors group-hover:text-[#1e40af] dark:text-slate-100 dark:group-hover:text-[#facc15]">
+                                                    <p className="font-bold text-slate-800 dark:text-slate-100">
                                                         {dept.departmentName}
                                                     </p>
-                                                    <p className="text-[10px] font-black uppercase tracking-tighter text-slate-400">
-                                                        ID: DEPT-{dept._id ? dept._id.toString().slice(-4) : "????"}
+                                                    <p className="mt-1 text-[9px] font-mono font-bold uppercase text-slate-400">
+                                                        ID: DEPT-{dept._id ? dept._id.toString().slice(-6) : "????"}
                                                     </p>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-5 text-right">
-                                            <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        
+                                        <td className="border border-slate-200 px-6 py-4 text-center align-top dark:border-slate-700">
+                                            <div className="flex justify-center gap-2">
                                                 <button
                                                     onClick={() => handleOpenEdit(dept)}
-                                                    className="rounded-xl p-2 text-slate-400 hover:bg-white hover:text-[#1e40af] dark:hover:bg-slate-800"
+                                                    className="p-1.5 text-slate-500 transition-colors hover:text-amber-600"
+                                                    title="Edit Department"
                                                 >
                                                     <Edit3 size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(dept._id)}
-                                                    className="rounded-xl p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30"
+                                                    className="p-1.5 text-slate-500 transition-colors hover:text-red-600"
+                                                    title="Delete Department"
                                                 >
                                                     <Trash2 size={18} />
-                                                </button>
-                                                <button className="p-2 text-slate-300">
-                                                    <ChevronRight size={18} />
                                                 </button>
                                             </div>
                                         </td>
                                     </motion.tr>
                                 ))}
                             </AnimatePresence>
+                            {(!departments || departments.length === 0) && (
+                                <tr>
+                                    <td colSpan="3" className="py-20 text-center font-bold uppercase tracking-widest text-slate-400">
+                                        No departments found
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
 
-                {/* --- PAGINATION --- */}
-                <div className="flex flex-col items-center justify-between gap-4 border-t border-slate-100 bg-slate-50/50 px-8 py-6 dark:border-slate-900 dark:bg-slate-900/30 md:flex-row">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                        Showing <span className="text-[#1e40af] dark:text-[#facc15]">{departments?.length || 0}</span> of {totalDepartmentCount} Units
+                {/* --- PAGINATION - UPDATED UI --- */}
+                <div className="flex flex-col items-center justify-between gap-4 border-t border-slate-200 bg-slate-50/50 px-6 py-4 dark:border-slate-700 dark:bg-slate-900/30 md:flex-row">
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
+                        Showing <span className="text-[#1e40af] dark:text-[#facc15]">{departments?.length || 0}</span> of{" "}
+                        <span className="text-slate-800 dark:text-slate-100">{totalDepartmentCount || 0}</span> Units
                     </p>
+
                     <div className="flex items-center gap-2">
                         <button
                             disabled={currentPage === 1}
                             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                            className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[10px] font-black uppercase tracking-widest disabled:opacity-30 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                            className="flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-wider text-slate-600 transition-all hover:bg-slate-50 disabled:opacity-30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
                         >
-                            Prev
+                            <ChevronRight size={12} className="rotate-180" /> Prev
                         </button>
+
+                        <div className="flex gap-1">
+                            {[...Array(Math.min(totalPages, 5))].map((_, i) => {
+                                let pageNum;
+                                if (totalPages <= 5) {
+                                    pageNum = i + 1;
+                                } else if (currentPage <= 3) {
+                                    pageNum = i + 1;
+                                } else if (currentPage >= totalPages - 2) {
+                                    pageNum = totalPages - 4 + i;
+                                } else {
+                                    pageNum = currentPage - 2 + i;
+                                }
+                                
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => setCurrentPage(pageNum)}
+                                        className={`h-8 w-8 rounded-lg text-[9px] font-black transition-all ${
+                                            currentPage === pageNum
+                                                ? "bg-[#1e40af] text-white shadow-md"
+                                                : "bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                                        }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
                         <button
                             disabled={currentPage === totalPages}
                             onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                            className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[10px] font-black uppercase tracking-widest disabled:opacity-30 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                            className="flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-wider text-slate-600 transition-all hover:bg-slate-50 disabled:opacity-30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
                         >
-                            Next
+                            Next <ChevronRight size={12} />
                         </button>
                     </div>
+
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
+                        Page <span className="text-[#1e40af] dark:text-[#facc15]">{currentPage}</span> of {totalPages || 1}
+                    </p>
                 </div>
             </div>
 
-            {/* --- MODAL --- */}
+            {/* --- MODAL - UPDATED UI --- */}
             <AnimatePresence>
                 {isModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -225,37 +267,38 @@ const DepartmentManagement = () => {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsModalOpen(false)}
-                            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+                            className="absolute inset-0 "
                         />
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="relative w-full max-w-md overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+                            className="relative w-full max-w-md overflow-hidden rounded-2xl border-b-[6px] border-[#facc15] bg-white shadow-2xl dark:bg-slate-900"
                         >
-                            <div className="flex items-center justify-between bg-[#1e40af] p-8 text-white">
-                                <div>
-                                    <h3 className="text-xl font-black uppercase tracking-tighter">
-                                        {editingDept ? "Update" : "Register"} <span className="text-[#facc15]">Department</span>
-                                    </h3>
-                                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-white/50">Internal Unit Management</p>
+                            <div className="bg-[#1e40af] p-6 text-white">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-xl font-black uppercase tracking-tight">
+                                            {editingDept ? "Update" : "Register"} <span className="text-[#facc15]">Department</span>
+                                        </h3>
+                                        <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-white/50">
+                                            Internal Unit Management
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => setIsModalOpen(false)}
+                                        className="rounded-full p-2 transition-colors hover:bg-white/10"
+                                    >
+                                        <X size={20} />
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="rounded-full p-2 hover:bg-white/10"
-                                >
-                                    <X size={20} />
-                                </button>
                             </div>
-                            <form
-                                onSubmit={handleSubmit}
-                                className="space-y-5 p-8"
-                            >
+                            <form onSubmit={handleSubmit} className="space-y-4 p-6">
                                 <div className="space-y-1">
                                     <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Department Name</label>
                                     <div className="relative">
                                         <Building2
-                                            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
+                                            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
                                             size={18}
                                         />
                                         <input
@@ -263,14 +306,14 @@ const DepartmentManagement = () => {
                                             type="text"
                                             value={formData.departmentName}
                                             onChange={(e) => setFormData({ ...formData, departmentName: e.target.value })}
-                                            className="w-full rounded-2xl border border-slate-100 bg-slate-50 py-3.5 pl-12 pr-5 text-sm font-bold outline-none focus:ring-2 focus:ring-[#1e40af] dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                                            placeholder="e.g. College of Engineering"
+                                            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-12 pr-5 text-sm font-bold outline-none focus:border-[#1e40af] focus:ring-1 focus:ring-[#1e40af] dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                            placeholder="e.g., College of Engineering"
                                         />
                                     </div>
                                 </div>
                                 <button
                                     type="submit"
-                                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#facc15] py-4 text-xs font-black uppercase tracking-widest text-[#1e40af] shadow-lg transition-all hover:brightness-110 active:scale-[0.98]"
+                                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#facc15] py-3.5 text-xs font-black uppercase tracking-widest text-[#1e40af] shadow-lg transition-all hover:brightness-105 active:scale-[0.98]"
                                 >
                                     {editingDept ? <Edit3 size={16} /> : <Plus size={16} />}
                                     {editingDept ? "SAVE CHANGES" : "CREATE DEPARTMENT"}

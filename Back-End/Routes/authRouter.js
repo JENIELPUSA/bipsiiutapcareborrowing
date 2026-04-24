@@ -17,10 +17,22 @@ router
     authController.getAllUsers,
   );
 
+router
+  .route("/getUserById")
+  .get(authController.protect, authController.getUserById);
+
 router.route("/mail-verification").post(authController.verifyOtp);
 
 router
   .route("/updatePassword")
   .patch(authController.protect, authController.updatePassword);
+
+router
+  .route("/updateUser/:id")
+  .patch(
+    authController.protect,
+    upload.single("avatar"),
+    authController.updateUser,
+  );
 
 module.exports = router;

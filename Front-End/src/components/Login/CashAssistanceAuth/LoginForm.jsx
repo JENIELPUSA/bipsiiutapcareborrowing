@@ -176,7 +176,7 @@ const ShowPasswordCheckbox = ({ showPassword, setShowPassword }) => (
             className="h-3.5 w-3.5 rounded border-blue-200 text-blue-900 focus:ring-yellow-400"
         />
         <label htmlFor="show-password" className="ml-2 cursor-pointer text-xs font-bold uppercase text-blue-800/60">
-            Remember Me
+            Show Password
         </label>
     </div>
 );

@@ -11,7 +11,7 @@ const equipmentLoanSchema = new mongoose.Schema(
         },
         status: {
           type: String,
-          enum: ["Release", "Returned", "Pending", "In-Review"],
+          enum: ["Release", "Returned", "Pending", "In-Review","Missing","Damage"],
           default: "Pending",
         },
         serialNumber: {
@@ -27,6 +27,10 @@ const equipmentLoanSchema = new mongoose.Schema(
         isPunchReturn: {
           type: Boolean,
           default: false,
+        },
+        condition: {
+          type: String,
+          enum: ["Ok", "Damage", "Missing"],
         },
       },
     ],

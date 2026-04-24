@@ -8,17 +8,14 @@ export const useCategory = () => useContext(CategoryContext);
 export const CategoryProvider = ({ children }) => {
     const { authToken } = useContext(AuthContext);
     const [isLoading, setIsLoading] = useState(false);
-    const hasInitialFetchRef = useRef(false);
-    const prevAuthTokenRef = useRef(null);
-
     const [categoriesDropdown, setCategoriesDropdown] = useState([]);
-
     const [categories, setCategories] = useState([]);
     const [totalCategoryCount, setTotalCategoryCount] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
     const [searchQuery, setSearchQuery] = useState("");
+    const [Equipments, setEquipments] = useState("");
 
     const backendURL = import.meta.env.VITE_REACT_APP_BACKEND_BASEURL;
 
@@ -126,7 +123,7 @@ export const CategoryProvider = ({ children }) => {
 
             setIsLoading(true);
             try {
-                const res = await axios.put(`${backendURL}/api/v1/Category/${id}`, data, {
+                const res = await axios.patch(`${backendURL}/api/v1/Category/${id}`, data, {
                     withCredentials: true,
                     headers: {
                         Authorization: `Bearer ${authToken}`,
@@ -175,6 +172,44 @@ export const CategoryProvider = ({ children }) => {
         [authToken, backendURL],
     );
 
+    const fetchEquipmentByCategory = useCallback(
+        async (categoryId, showAll = false) => {
+            if (!authToken || !categoryId) return;
+            setIsLoading(true);
+
+            try {
+                const params = {};
+
+                // Default: limit = rowsPerPage; showAll=true overrides
+                if (!showAll) params.limit = rowsPerPage;
+                if (!showAll) params.page = currentPage;
+                params.showAll = showAll;
+
+                const res = await axios.get(
+                    `${backendURL}/api/v1/equipment/${categoryId}`,
+                    {
+                        params,
+                        withCredentials: true,
+                        headers: { Authorization: `Bearer ${authToken}` },
+                    }
+                );
+
+                const data = res.data.data;
+                setEquipments(data || []);
+                setTotalCount(res.data.count || data.length);
+                if (!showAll) {
+                    setTotalPages(Math.ceil((res.data.total || data.length) / rowsPerPage));
+                }
+            } catch (error) {
+                console.error("Error fetching equipments:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        },
+        [authToken, backendURL, currentPage, rowsPerPage]
+    );
+
+
     // --- CRITICAL FIX ---
     // Tuwing magbabago ang currentPage o searchQuery, dapat tumakbo ito.
     useEffect(() => {
@@ -199,9 +234,9 @@ export const CategoryProvider = ({ children }) => {
             setSearchQuery,
             fetchCategories,
             fetchcategorydropdown,
-            categoriesDropdown
+            categoriesDropdown, fetchEquipmentByCategory, Equipments, setEquipments
         }),
-        [categories, isLoading, fetchCategories, createCategory, updateCategory, deleteCategory, setCategories],
+        [categories, isLoading, fetchCategories, createCategory, updateCategory, deleteCategory, setCategories, fetchEquipmentByCategory, Equipments],
     );
 
     return <CategoryContext.Provider value={contextValue}>{children}</CategoryContext.Provider>;

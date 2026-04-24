@@ -1,406 +1,580 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useCallback } from "react";
 import {
-  User,
-  Search,
-  RotateCcw,
-  ShieldCheck,
-  PlusCircle,
-  X,
-  Phone,
-  Fingerprint,
-  Beaker,
-  Loader2,
-  CheckCircle,
-  Clock,
-  ChevronLeft,
-  ChevronRight,
+    Search,
+    RotateCcw,
+    PlusCircle,
+    X,
+    Loader2,
+    CheckCircle,
+    ChevronRight,
+    ClipboardList,
+    AlertTriangle,
+    Check,
+    HelpCircle,
+    XCircle,
+    ChevronLeft,
+    ChevronsLeft,
+    ChevronsRight,
+    Inbox,
 } from "lucide-react";
 import { LoanEquipmentContext } from "../../contexts/LoanEuipmentContext/LoanEuipmentContext";
+import StatusModal from "../../ReusableFolder/SuccessandField";
+import { AuthContext } from "../../contexts/AuthContext";
 
-// Skeleton Table Row
 const SkeletonRow = () => (
-  <tr className="animate-pulse">
-    <td className="px-6 py-5">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-slate-200" />
-          <div>
-            <div className="h-4 w-28 rounded bg-slate-200" />
-            <div className="mt-1 h-3 w-16 rounded bg-slate-200" />
-          </div>
-        </div>
-        <div className="space-y-1">
-          <div className="h-3 w-32 rounded bg-slate-200" />
-          <div className="h-3 w-28 rounded bg-slate-200" />
-        </div>
-      </div>
-    </td>
-    <td className="px-6 py-5">
-      <div className="space-y-3">
-        <div className="h-24 w-full rounded-xl bg-slate-200" />
-      </div>
-    </td>
-    <td className="px-6 py-5">
-      <div className="space-y-3">
-        <div className="h-16 w-full rounded-lg bg-slate-200" />
-        <div className="h-16 w-full rounded-lg bg-slate-200" />
-      </div>
-    </td>
-  </tr>
+    <tr className="animate-pulse">
+        {Array(5)
+            .fill(0)
+            .map((_, i) => (
+                <td
+                    key={i}
+                    className="border border-slate-200 px-4 py-4"
+                >
+                    <div className="h-4 w-full rounded bg-slate-200" />
+                </td>
+            ))}
+    </tr>
 );
 
 const RequestEquipment = () => {
-  const { 
-    loans, 
-    updateLoan, 
-    fetchLoans, // Gumamit ng fetchLoans (base sa provider mo kanina)
-    loading: contextLoading, 
-    currentPage, 
-    setCurrentPage, 
-    totalPages, 
-    setSearchQuery // Gamitin ang setter mula sa context
-  } = useContext(LoanEquipmentContext);
+    const { updateLoan, loading: contextLoading, setCurrentPage, setSearchQuery, latestEquipment, pagination } = useContext(LoanEquipmentContext);
+    const { role } = useContext(AuthContext);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeSelection, setActiveSelection] = useState(null);
-  const [inputSN, setInputSN] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [processingId, setProcessingId] = useState(null); 
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+    const [activeSelection, setActiveSelection] = useState(null);
+    const [inputSN, setInputSN] = useState("");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [processingId, setProcessingId] = useState(null);
+    const [showStatusModal, setShowStatusModal] = useState(false);
+    const [statusModalProps, setStatusModalProps] = useState({
+        status: "success",
+        error: null,
+        title: "",
+        message: "",
+        onRetry: null,
+    });
 
-  const selectedLoan = loans?.find((l) => l._id === activeSelection?.loanId);
+    // Debounced search
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            setSearchQuery(searchTerm);
+            setCurrentPage(1);
+        }, 500);
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm, setSearchQuery, setCurrentPage]);
 
-  // Sync search input to context searchQuery
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      setSearchQuery(searchTerm);
-      setCurrentPage(1); // Back to page 1 on search
-    }, 500);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm, setSearchQuery, setCurrentPage]);
-
-  const openSNModal = (loanId, equipmentId) => {
-    setActiveSelection({ loanId, equipmentId });
-    setIsModalOpen(true);
-    setInputSN("");
-  };
-
-  const handleSaveSN = async () => {
-    if (!inputSN.trim()) {
-      alert("Please enter a Serial Number");
-      return;
-    }
-
-    const equipmentId = activeSelection?.equipmentId;
-    const parentId = activeSelection?.loanId;
-
-    setProcessingId(equipmentId);
-    try {
-      const payloads = {
-        equipmentId,
-        serialNumber: inputSN,
-        status: "Release",
-      };
-      await updateLoan(parentId, payloads);
-      setInputSN("");
-      setIsModalOpen(false);
-      setActiveSelection(null);
-    } catch (error) {
-      console.error("Failed to release equipment:", error);
-      alert("Failed to release equipment.");
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
-  const handleReturn = async (loanId, equipmentId) => {
-    if (window.confirm("Are you sure you want to mark this equipment as Returned?")) {
-      setProcessingId(equipmentId);
-      try {
-        const payloads = {
-          equipmentId,
-          status: "Returned",
-        };
-        await updateLoan(loanId, payloads);
-      } catch (error) {
-        console.error("Failed to return equipment:", error);
-        alert("Failed to return equipment.");
-      } finally {
-        setProcessingId(null);
-      }
-    }
-  };
-
-  const StatusBadge = ({ status }) => {
-    const config = {
-      Pending: { bg: "bg-amber-100", text: "text-amber-700", icon: Clock },
-      Release: { bg: "bg-blue-100", text: "text-blue-700", icon: ShieldCheck },
-      "In-Review": { bg: "bg-indigo-100", text: "text-indigo-700", icon: Clock },
-      Returned: { bg: "bg-emerald-100", text: "text-emerald-700", icon: CheckCircle },
+    const openSNModal = (loanId, equipmentId) => {
+        setActiveSelection({ loanId, equipmentId });
+        setIsModalOpen(true);
+        setInputSN("");
     };
-    const { bg, text, icon: Icon } = config[status] || config.Pending;
+
+    const openReturnModal = (loanId, equipmentId) => {
+        setActiveSelection({ loanId, equipmentId });
+        setIsReturnModalOpen(true);
+    };
+
+    const showStatusMessage = useCallback((status, error = null, customProps = {}) => {
+        // Extract message safely - don't pass Error object directly
+        let errorMessage = "";
+        if (error) {
+            errorMessage = typeof error === "string" ? error : error.message || JSON.stringify(error);
+        }
+
+        setStatusModalProps({
+            status: status,
+            error: errorMessage, // Pass string message, not Error object
+            title: customProps.title || "",
+            message: customProps.message || errorMessage,
+            onRetry: customProps.onRetry || null,
+        });
+        setShowStatusModal(true);
+    }, []);
+
+    const handleSaveSN = async () => {
+        if (!inputSN.trim()) {
+            showStatusMessage("error", null, {
+                title: "Validation Error",
+                message: "Please enter a serial number.",
+            });
+            return;
+        }
+
+        const { equipmentId, loanId: parentId } = activeSelection;
+        setProcessingId(equipmentId);
+
+        try {
+            const result = await updateLoan(parentId, {
+                equipmentId,
+                serialNumber: inputSN,
+                status: "Release",
+            });
+
+            // Check if result indicates an error
+            if (result?.error || result?.success === false) {
+                throw new Error(result?.message || "Failed to assign serial number");
+            }
+
+            // Success
+            setIsModalOpen(false);
+            showStatusMessage("success", null, {
+                title: "Success!",
+                message: "Serial number assigned successfully and equipment released.",
+            });
+        } catch (error) {
+            console.error("Save SN Error:", error);
+
+            // Extract meaningful error message
+            let errorMessage = "Failed to assign serial number. Please try again.";
+
+            if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.response?.data?.error) {
+                errorMessage = error.response.data.error;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            // Show error modal with string message, not Error object
+            showStatusMessage("error", errorMessage, {
+                title: "Operation Failed",
+                message: errorMessage,
+                onRetry: () => handleSaveSN(),
+            });
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const submitReturn = async (condition) => {
+        const { loanId, equipmentId } = activeSelection;
+        setProcessingId(equipmentId);
+
+        try {
+            const newStatus = condition === "Ok" ? "Returned" : condition;
+            const result = await updateLoan(loanId, {
+                equipmentId,
+                status: newStatus,
+                condition: condition,
+            });
+
+            // Check if result indicates an error
+            if (result?.error || result?.success === false) {
+                throw new Error(result?.message || "Failed to process return");
+            }
+
+            // Success
+            setIsReturnModalOpen(false);
+            showStatusMessage("success", null, {
+                title: "Return Processed!",
+                message: `Equipment marked as ${condition === "Ok" ? "Returned" : condition} successfully.`,
+            });
+        } catch (error) {
+            console.error("Return Error:", error);
+
+            // Extract meaningful error message
+            let errorMessage = "Failed to process return. Please try again.";
+
+            if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.response?.data?.error) {
+                errorMessage = error.response.data.error;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            // Show error modal with string message, not Error object
+            showStatusMessage("error", errorMessage, {
+                title: "Return Failed",
+                message: errorMessage,
+                onRetry: () => submitReturn(condition),
+            });
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    // Pagination handlers
+    const goToPage = (page) => {
+        if (page < 1 || page > pagination.totalPages) return;
+        setCurrentPage(page);
+    };
+
+    const getPageNumbers = () => {
+        const { page, totalPages } = pagination;
+        if (totalPages <= 1) return [1];
+        const delta = 2;
+        const range = [];
+        for (let i = Math.max(2, page - delta); i <= Math.min(totalPages - 1, page + delta); i++) {
+            range.push(i);
+        }
+        if (page - delta > 2) range.unshift("...");
+        if (page + delta < totalPages - 1) range.push("...");
+        range.unshift(1);
+        if (totalPages !== 1) range.push(totalPages);
+        return range;
+    };
+
+    console.log("Latest Equipment Data:", latestEquipment);
+
+    const hasData = latestEquipment && latestEquipment.length > 0;
+    
+    // Determine if In-Charge column should be hidden
+    const hideInChargeColumn = role === "in-charge";
+    // Determine if Actions column should be hidden (for admin role)
+    const hideActionsColumn = role === "admin";
+
     return (
-      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${bg} ${text}`}>
-        <Icon size={10} />
-        {status}
-      </span>
-    );
-  };
-
-  return (
-    <div className="min-h-screen w-full bg-slate-50 p-4 font-sans md:p-8">
-      <div className="mx-auto max-w-7xl space-y-6">
-        {/* Header & Search */}
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-          <h1 className="text-2xl font-black tracking-tight text-blue-900">
-            EQUIPMENT REQUESTS
-          </h1>
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search name or RFID..."
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Table Container */}
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-          <div className="overflow-x-auto">
-            <table className="w-full border-separate border-spacing-0 text-left">
-              <thead className="bg-blue-900 text-[11px] font-bold uppercase tracking-wider text-yellow-400">
-                <tr>
-                  <th className="px-6 py-5 rounded-tl-2xl">Borrower Information</th>
-                  <th className="px-6 py-5">Equipment Details</th>
-                  <th className="px-6 py-5 rounded-tr-2xl">Deployment Info</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {contextLoading ? (
-                  Array(3).fill().map((_, i) => <SkeletonRow key={i} />)
-                ) : loans?.length === 0 ? (
-                  <tr>
-                    <td colSpan="3" className="px-6 py-16 text-center text-slate-500">
-                      <div className="flex flex-col items-center">
-                        <User size={48} className="mb-3 text-slate-300" />
-                        <p className="text-sm font-medium">No loan requests found</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  loans.map((loan) => (
-                    <tr key={loan._id} className="align-top transition-colors hover:bg-slate-50/80">
-                      <td className="px-6 py-5">
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
-                              <User size={16} />
-                            </div>
-                            <div>
-                              <div className="text-sm font-bold uppercase leading-tight text-slate-800">
-                                {loan.borrower?.firstName} {loan.borrower?.lastName}
-                              </div>
-                              <span className="inline-block rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold uppercase text-blue-600">
-                                {loan.borrower?.borrowerType || "Student"}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="space-y-1 text-[11px] font-medium text-slate-500">
-                            <div className="flex items-center gap-1.5">
-                              <Fingerprint size={12} className="text-slate-400" />
-                              RFID: <span className="font-mono text-slate-700">{loan.borrower?.rfidId}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Phone size={12} className="text-slate-400" />
-                              {loan.borrower?.contactNumber || "No Contact"}
-                            </div>
-                          </div>
+        <div className="min-h-screen w-full bg-slate-50 p-4 font-sans md:p-8">
+            <div className="mx-auto max-w-7xl space-y-6">
+                {/* HEADER */}
+                <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+                    <div className="flex items-center gap-4">
+                        <div className="rounded-2xl bg-[#1e40af] p-3 shadow-lg shadow-blue-200">
+                            <ClipboardList
+                                className="text-[#facc15]"
+                                size={28}
+                            />
                         </div>
-                      </td>
+                        <div>
+                            <h2 className="text-2xl font-black uppercase tracking-tight text-slate-800">
+                                Equipment <span className="text-[#1e40af]">Logs</span>
+                            </h2>
+                        </div>
+                    </div>
+                    <div className="relative w-full md:w-80">
+                        <Search
+                            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                            size={18}
+                        />
+                        <input
+                            type="text"
+                            placeholder="Search borrower..."
+                            className="w-full rounded-xl border-none bg-white py-3 pl-12 pr-4 text-sm shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-[#1e40af]"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                </div>
 
-                      <td className="px-6 py-5">
-                        <div className="space-y-3">
-                          {loan.equipmentIds.map((item, idx) => (
-                            <div key={idx} className="rounded-xl border border-slate-200 bg-slate-50 p-3 shadow-sm">
-                              <div className="mb-2 flex items-start justify-between gap-4">
-                                <div>
-                                  <div className="text-xs font-bold uppercase text-blue-950">
-                                    {item.categoryName || `Equip ID: ${item.equipmentId.slice(-6)}`}
-                                  </div>
-                                  <div className="mt-1">
-                                    <StatusBadge status={item.status || "Pending"} />
-                                  </div>
-                                </div>
-
-                                {(item.status === "Release" || item.status === "In-Review") ? (
-                                  <button
-                                    onClick={() => handleReturn(loan._id, item.equipmentId)}
-                                    disabled={processingId === item.equipmentId}
-                                    className="flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-[10px] font-bold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
-                                  >
-                                    {processingId === item.equipmentId ? (
-                                      <Loader2 size={12} className="animate-spin" />
-                                    ) : (
-                                      <RotateCcw size={12} />
+                {/* TABLE */}
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-slate-200 bg-slate-50">
+                                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Borrower</th>
+                                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                        Asset Info
+                                    </th>
+                                    {!hideInChargeColumn && (
+                                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">In-charge</th>
                                     )}
-                                    {processingId === item.equipmentId ? "PROCESSING..." : "RETURN"}
-                                  </button>
-                                ) : item.status === "Returned" ? (
-                                  <div className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[9px] font-bold uppercase text-emerald-600">
-                                    COMPLETED
-                                  </div>
-                                ) : (
-                                  <button
-                                    onClick={() => openSNModal(loan._id, item.equipmentId)}
-                                    disabled={processingId === item.equipmentId}
-                                    className="flex items-center gap-1 rounded-lg bg-amber-500 px-2.5 py-1.5 text-[10px] font-bold text-white shadow-sm transition-all hover:bg-amber-600 disabled:opacity-50"
-                                  >
-                                    {processingId === item.equipmentId ? (
-                                      <Loader2 size={12} className="animate-spin" />
-                                    ) : (
-                                      <PlusCircle size={12} />
+                                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Status</th>
+                                    {!hideActionsColumn && (
+                                        <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">Actions</th>
                                     )}
-                                    {processingId === item.equipmentId ? "ASSIGNING..." : "ASSIGN SN"}
-                                  </button>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500">
-                                SN: {item.serialNumber ? (
-                                  <span className="font-mono text-blue-600">{item.serialNumber}</span>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {contextLoading ? (
+                                    Array(5)
+                                        .fill(0)
+                                        .map((_, i) => <SkeletonRow key={i} />)
+                                ) : !hasData ? (
+                                    <tr>
+                                        <td 
+                                            colSpan={(() => {
+                                                let cols = 3; // Borrower, Asset Info, Status
+                                                if (!hideInChargeColumn) cols++;
+                                                if (!hideActionsColumn) cols++;
+                                                return cols;
+                                            })()} 
+                                            className="py-16 text-center"
+                                        >
+                                            <div className="flex flex-col items-center justify-center gap-3 text-slate-400">
+                                                <Inbox
+                                                    size={48}
+                                                    strokeWidth={1.5}
+                                                />
+                                                <div className="text-base font-semibold text-slate-500">No Data Found</div>
+                                                <p className="text-xs text-slate-400">No equipment records match your criteria.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
                                 ) : (
-                                  <span className="italic text-red-400">Awaiting Serial...</span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </td>
+                                    latestEquipment.map((loan) =>
+                                        (loan.equipmentIds || []).map((item, idx) => (
+                                            <tr
+                                                key={`${loan._id}-${idx}`}
+                                                className="transition-colors hover:bg-slate-50/50"
+                                            >
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm font-bold text-slate-700">{loan.borrower?.fullName}</div>
+                                                    <div className="font-mono text-[10px] text-slate-400">{loan.borrower?.rfidId}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-xs font-bold uppercase text-[#1e40af]">{item.categoryName}</div>
+                                                    <div
+                                                        className={`text-[10px] font-medium ${item.status === "Damage" ? "font-bold text-red-500" : "text-slate-500"}`}
+                                                    >
+                                                        SN: {item.serialNumber || "Unassigned"}
+                                                    </div>
+                                                </td>
 
-                      <td className="px-6 py-5">
-                        <div className="space-y-3 text-[11px]">
-                          <div className="rounded-lg border border-slate-100 p-2">
-                            <div className="mb-1 flex items-center gap-1.5 text-[9px] font-bold uppercase text-slate-600">
-                              <Beaker size={12} className="text-purple-500" />
-                              Lab Destination
+                                                {!hideInChargeColumn && (
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-sm font-bold text-slate-700">{loan.incharge?.fullName}</div>
+                                                    </td>
+                                                )}
+
+                                                <td className="px-6 py-4">
+                                                    <span
+                                                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[9px] font-black uppercase ${
+                                                            item.status === "Damage"
+                                                                ? "border-red-200 bg-red-50 text-red-600 line-through decoration-red-800 decoration-2"
+                                                                : item.status === "Returned"
+                                                                  ? "border-emerald-100 bg-emerald-50 text-emerald-600"
+                                                                  : item.status === "Missing"
+                                                                    ? "border-slate-200 bg-slate-100 text-slate-600"
+                                                                    : "border-blue-100 bg-blue-50 text-blue-600"
+                                                        }`}
+                                                    >
+                                                        {item.status || "Pending"}
+                                                    </span>
+                                                </td>
+                                                
+                                                {!hideActionsColumn && (
+                                                    <td className="px-6 py-4 text-center">
+                                                        {item.status === "Damage" ? (
+                                                            <button
+                                                                onClick={() => openReturnModal(loan._id, item.equipmentId)}
+                                                                disabled={processingId === item.equipmentId}
+                                                                className="rounded-lg bg-red-100 p-2 text-red-700 shadow-sm transition-all hover:bg-red-600 hover:text-white disabled:opacity-50"
+                                                            >
+                                                                {processingId === item.equipmentId ? (
+                                                                    <Loader2
+                                                                        size={16}
+                                                                        className="animate-spin"
+                                                                    />
+                                                                ) : (
+                                                                    <XCircle size={16} />
+                                                                )}
+                                                            </button>
+                                                        ) : item.status === "Missing" || item.status === "In-Review" ? (
+                                                            <button
+                                                                onClick={() => openReturnModal(loan._id, item.equipmentId)}
+                                                                disabled={processingId === item.equipmentId}
+                                                                className="rounded-lg bg-red-50 p-2 text-red-600 shadow-sm transition-all hover:bg-red-600 hover:text-white disabled:opacity-50"
+                                                            >
+                                                                {processingId === item.equipmentId ? (
+                                                                    <Loader2
+                                                                        size={16}
+                                                                        className="animate-spin"
+                                                                    />
+                                                                ) : (
+                                                                    <RotateCcw size={16} />
+                                                                )}
+                                                            </button>
+                                                        ) : !item.status || item.status === "Pending" ? (
+                                                            <button
+                                                                onClick={() => openSNModal(loan._id, item.equipmentId)}
+                                                                className="rounded-lg bg-amber-50 p-2 text-amber-600 shadow-sm transition-all hover:bg-[#facc15] hover:text-[#1e40af]"
+                                                            >
+                                                                <PlusCircle size={16} />
+                                                            </button>
+                                                        ) : (
+                                                            <div className="flex flex-col items-center gap-0.5 opacity-60">
+                                                                <CheckCircle
+                                                                    size={18}
+                                                                    className="mx-auto text-emerald-500"
+                                                                />
+                                                                <span className="text-[7px] font-black uppercase tracking-tighter text-slate-400">
+                                                                    Settled
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        )),
+                                    )
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* PAGINATION */}
+                {!contextLoading && hasData && pagination && pagination.totalPages > 0 && (
+                    <div className="flex flex-col items-center justify-between gap-4 rounded-xl bg-white p-4 shadow-md sm:flex-row">
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => goToPage(1)}
+                                disabled={pagination.page === 1}
+                                className="rounded-lg p-2 text-slate-500 transition-all hover:bg-slate-100 disabled:opacity-40"
+                            >
+                                <ChevronsLeft size={18} />
+                            </button>
+                            <button
+                                onClick={() => goToPage(pagination.page - 1)}
+                                disabled={pagination.page === 1}
+                                className="rounded-lg p-2 text-slate-500 transition-all hover:bg-slate-100 disabled:opacity-40"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            <div className="flex items-center gap-1">
+                                {getPageNumbers().map((pageNum, idx) =>
+                                    pageNum === "..." ? (
+                                        <span
+                                            key={idx}
+                                            className="px-2 text-slate-400"
+                                        >
+                                            ...
+                                        </span>
+                                    ) : (
+                                        <button
+                                            key={idx}
+                                            onClick={() => goToPage(pageNum)}
+                                            className={`h-8 w-8 rounded-lg text-sm font-semibold transition-all ${pagination.page === pageNum ? "bg-[#1e40af] text-white shadow-md" : "text-slate-600 hover:bg-slate-100"}`}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    ),
+                                )}
                             </div>
-                            <div className="truncate rounded bg-slate-50 p-1 font-mono text-slate-700">
-                              {loan.borrower?.laboratoryId || "General Lab"}
-                            </div>
-                          </div>
-                          <div className="rounded-lg border border-slate-100 p-2">
-                            <div className="mb-1 flex items-center gap-1.5 text-[9px] font-bold uppercase text-slate-600">
-                              <ShieldCheck size={12} className="text-green-500" />
-                              Processor
-                            </div>
-                            <div className="font-bold uppercase text-slate-800">
-                              {loan.incharge?.first_name} {loan.incharge?.last_name}
-                            </div>
-                          </div>
+                            <button
+                                onClick={() => goToPage(pagination.page + 1)}
+                                disabled={pagination.page === pagination.totalPages}
+                                className="rounded-lg p-2 text-slate-500 transition-all hover:bg-slate-100 disabled:opacity-40"
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                            <button
+                                onClick={() => goToPage(pagination.totalPages)}
+                                disabled={pagination.page === pagination.totalPages}
+                                className="rounded-lg p-2 text-slate-500 transition-all hover:bg-slate-100 disabled:opacity-40"
+                            >
+                                <ChevronsRight size={18} />
+                            </button>
                         </div>
-                      </td>
-                    </tr>
-                  ))
+                        <div className="text-xs text-slate-500">
+                            Showing {(pagination.page - 1) * pagination.limit + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
+                            of {pagination.total} entries
+                        </div>
+                    </div>
                 )}
-              </tbody>
-            </table>
-          </div>
+            </div>
 
-{/* PAGINATION */}
-<div className="flex flex-col items-center justify-between gap-4 border-t border-slate-100 bg-slate-50/50 px-8 py-6 dark:border-slate-900 dark:bg-slate-900/30 md:flex-row">
-  {/* Left space empty or can be used for other info, now hidden to focus on buttons */}
-  <div className="hidden md:block w-40"></div> 
+            {/* SN ASSIGNMENT MODAL */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 p-4 backdrop-blur-sm">
+                    <div className="animate-in zoom-in w-full max-w-sm rounded-3xl border-t-8 border-[#1e40af] bg-white p-8 shadow-2xl duration-200">
+                        <div className="mb-6 flex items-center justify-between">
+                            <h3 className="text-xl font-black uppercase tracking-tight text-slate-800">
+                                Assign <span className="text-[#1e40af]">SN</span>
+                            </h3>
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="text-slate-400 hover:text-slate-600"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <input
+                                autoFocus
+                                className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold outline-none transition-all focus:border-[#1e40af]"
+                                placeholder="Enter Serial Number..."
+                                value={inputSN}
+                                onChange={(e) => setInputSN(e.target.value)}
+                                onKeyPress={(e) => e.key === "Enter" && handleSaveSN()}
+                            />
+                            <button
+                                onClick={handleSaveSN}
+                                disabled={!inputSN || processingId}
+                                className="w-full rounded-2xl bg-[#1e40af] py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg hover:brightness-110 disabled:opacity-50"
+                            >
+                                {processingId ? (
+                                    <Loader2
+                                        size={16}
+                                        className="mx-auto animate-spin"
+                                    />
+                                ) : (
+                                    "Confirm Release"
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
-  {/* Center: Pagination Controls */}
-  <div className="flex items-center gap-2">
-    <button
-      disabled={currentPage === 1 || contextLoading}
-      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-      className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-[10px] font-black uppercase tracking-widest text-slate-600 transition-all hover:bg-slate-50 disabled:opacity-30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 shadow-sm"
-    >
-      <ChevronLeft size={14} /> Prev
-    </button>
+            {/* RETURN MODAL */}
+            {isReturnModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 p-4 backdrop-blur-sm">
+                    <div className="animate-in zoom-in w-full max-w-sm rounded-3xl border-t-8 border-red-500 bg-white p-8 shadow-2xl duration-200">
+                        <div className="mb-6 flex items-center justify-between font-black uppercase tracking-tight text-slate-800">
+                            Return Status
+                            <button
+                                onClick={() => setIsReturnModalOpen(false)}
+                                className="text-slate-400 hover:text-slate-600"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3">
+                            <button
+                                onClick={() => submitReturn("Ok")}
+                                disabled={processingId}
+                                className="flex w-full items-center justify-between rounded-2xl border-2 border-emerald-100 bg-emerald-50 px-5 py-4 font-bold text-emerald-700 transition-all hover:bg-emerald-100 disabled:opacity-50"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Check size={20} /> Good Condition
+                                </div>
+                                <ChevronRight size={16} />
+                            </button>
+                            <button
+                                onClick={() => submitReturn("Damage")}
+                                disabled={processingId}
+                                className="flex w-full items-center justify-between rounded-2xl border-2 border-red-100 bg-red-50 px-5 py-4 font-bold text-red-700 transition-all hover:bg-red-100 disabled:opacity-50"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <AlertTriangle size={20} /> Damaged
+                                </div>
+                                <ChevronRight size={16} />
+                            </button>
+                            <button
+                                onClick={() => submitReturn("Missing")}
+                                disabled={processingId}
+                                className="flex w-full items-center justify-between rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 font-bold text-slate-700 transition-all hover:bg-slate-100 disabled:opacity-50"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <HelpCircle size={20} /> Missing
+                                </div>
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                        {processingId && (
+                            <div className="mt-4 flex justify-center">
+                                <Loader2
+                                    className="animate-spin text-slate-400"
+                                    size={24}
+                                />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
-    <div className="flex gap-1">
-      {[...Array(totalPages)].map((_, i) => (
-        <button
-          key={i + 1}
-          onClick={() => setCurrentPage(i + 1)}
-          className={`h-10 w-10 rounded-xl text-[10px] font-black transition-all ${
-            currentPage === i + 1
-              ? "bg-[#1e40af] text-white shadow-lg shadow-blue-200 dark:shadow-none"
-              : "bg-white text-slate-400 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900"
-          }`}
-        >
-          {i + 1}
-        </button>
-      ))}
-    </div>
-
-    <button
-      disabled={currentPage === totalPages || contextLoading}
-      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-      className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-[10px] font-black uppercase tracking-widest text-slate-600 transition-all hover:bg-slate-50 disabled:opacity-30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 shadow-sm"
-    >
-      Next <ChevronRight size={14} />
-    </button>
-  </div>
-
-  {/* Right: Page Indicator */}
-  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 w-40 text-right">
-    Page <span className="text-[#1e40af] dark:text-[#facc15]">{currentPage}</span> of {totalPages || 1}
-  </p>
-</div>
+            {/* STATUS MODAL */}
+            <StatusModal
+                isOpen={showStatusModal}
+                onClose={() => setShowStatusModal(false)}
+                {...statusModalProps}
+            />
         </div>
-      </div>
-
-      {/* Modal - Walang Pagbabago sa UI */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-950/40 p-4 backdrop-blur-md">
-          <div className="w-full max-w-md animate-in fade-in zoom-in rounded-3xl bg-white p-6 shadow-2xl duration-300 md:p-8">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-bold text-slate-900">Release Equipment</h3>
-                <p className="text-xs text-slate-500">Enter the serial number to release</p>
-              </div>
-              <button onClick={() => setIsModalOpen(false)} className="rounded-full bg-slate-100 p-2 text-slate-400 hover:bg-slate-200">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="mb-8 space-y-6">
-              <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4">
-                <div className="mb-1 text-[10px] font-bold uppercase text-blue-600">Destination</div>
-                <div className="break-all font-mono text-sm text-blue-900">{selectedLoan?.borrower?.laboratoryId || "General Lab"}</div>
-              </div>
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase text-slate-500">Device Serial Number</label>
-                <input
-                  autoFocus
-                  type="text"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-medium outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                  placeholder="e.g., SN-2026-XYZ"
-                  value={inputSN}
-                  onChange={(e) => setInputSN(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !processingId && handleSaveSN()}
-                />
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => setIsModalOpen(false)} className="flex-1 rounded-xl py-3 text-sm font-bold text-slate-500 hover:bg-slate-100" disabled={!!processingId}>
-                Cancel
-              </button>
-              <button onClick={handleSaveSN} disabled={!!processingId} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-900 py-3 text-sm font-bold text-yellow-400 hover:bg-blue-800 disabled:opacity-50">
-                {processingId ? <Loader2 size={16} className="animate-spin" /> : null}
-                Confirm Release
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    );
 };
 
 export default RequestEquipment;

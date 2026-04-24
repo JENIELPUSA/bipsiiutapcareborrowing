@@ -13,28 +13,30 @@ import { BorrowerProvider } from "./contexts/BorrowerContext/BorrowerContext.jsx
 import { LoanEquipmentProvider } from "./contexts/LoanEuipmentContext/LoanEuipmentContext.jsx";
 import { NotificationDisplayProvider } from "./contexts/NotificationContext/NotificationContext.jsx";
 import { EquipmentProvider } from "./contexts/EquipmentContext/EquipmentContext.jsx";
-
+import { UpdateDisplayProvider } from "./contexts/UpdatePassword/UpdatePassword.jsx";
 createRoot(document.getElementById("root")).render(
     <AuthProvider>
-        <RFIDProvider>
-            <EquipmentProvider>
-                <NotificationDisplayProvider>
-                    <LoanEquipmentProvider>
-                        <BorrowerProvider>
-                            <CategoryProvider>
-                                <LaboratoryProvider>
-                                    <DepartmentProvider>
-                                        <AdminDisplayProvider>
-                                            <App />
-                                            <SocketListener />
-                                        </AdminDisplayProvider>
-                                    </DepartmentProvider>
-                                </LaboratoryProvider>
-                            </CategoryProvider>
-                        </BorrowerProvider>
-                    </LoanEquipmentProvider>
-                </NotificationDisplayProvider>
-            </EquipmentProvider>
-        </RFIDProvider>
+        <UpdateDisplayProvider>
+            <RFIDProvider>
+                <EquipmentProvider>
+                    <NotificationDisplayProvider>
+                        <LoanEquipmentProvider>
+                            <BorrowerProvider>
+                                <CategoryProvider>
+                                    <LaboratoryProvider>
+                                        <DepartmentProvider>
+                                            <AdminDisplayProvider>
+                                                <App />
+                                                <SocketListener />
+                                            </AdminDisplayProvider>
+                                        </DepartmentProvider>
+                                    </LaboratoryProvider>
+                                </CategoryProvider>
+                            </BorrowerProvider>
+                        </LoanEquipmentProvider>
+                    </NotificationDisplayProvider>
+                </EquipmentProvider>
+            </RFIDProvider>
+        </UpdateDisplayProvider>
     </AuthProvider>,
 );

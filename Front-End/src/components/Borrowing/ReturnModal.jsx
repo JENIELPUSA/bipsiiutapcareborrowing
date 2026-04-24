@@ -7,6 +7,11 @@ const ReturnModal = ({ isOpen, onClose, onConfirm, loading, RfidLoansAll = [] })
     const [checkedItems, setCheckedItems] = useState([]);
     const { returnLoan } = useContext(LoanEquipmentContext);
 
+    // Only show items with "Release" status
+    const availableLoans = RfidLoansAll.filter(
+        (loan) => loan.equipment?.status === "Release"
+    );
+
     // I-reset ang selection tuwing isasara ang modal
     useEffect(() => {
         if (!isOpen) setCheckedItems([]);
@@ -24,10 +29,10 @@ const ReturnModal = ({ isOpen, onClose, onConfirm, loading, RfidLoansAll = [] })
     };
 
     const toggleSelectAll = () => {
-        if (checkedItems.length === RfidLoansAll.length) {
+        if (checkedItems.length === availableLoans.length) {
             setCheckedItems([]);
         } else {
-            setCheckedItems(RfidLoansAll);
+            setCheckedItems(availableLoans);
         }
     };
 
@@ -44,13 +49,11 @@ const ReturnModal = ({ isOpen, onClose, onConfirm, loading, RfidLoansAll = [] })
 
         try {
             // 2. Kunin ang main ID (posibleng transaction ID o loan ID)
-            // Gamitin natin ang ID mula sa unang item o sa props kung meron
             const mainId = checkedItems[0]?._id;
 
             console.log("📤 Sending Bulk Payload:", { id: mainId, items: bulkPayload });
 
             // 3. Isang tawag lang sa API gamit ang array
-            // Siguraduhin na ang returnLoan function ay handa tumanggap ng array
             await returnLoan(mainId, bulkPayload);
 
             if (onConfirm) {
@@ -66,7 +69,7 @@ const ReturnModal = ({ isOpen, onClose, onConfirm, loading, RfidLoansAll = [] })
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center">
                     <motion.div
                         initial={{ scale: 0.9, opacity: 0, y: 10 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -98,28 +101,29 @@ const ReturnModal = ({ isOpen, onClose, onConfirm, loading, RfidLoansAll = [] })
                         {/* LIST BODY */}
                         <div className="flex-1 overflow-y-auto bg-slate-50/40 p-8">
                             <div className="mb-5 flex items-center justify-between px-2 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                                <span>Select Items ({RfidLoansAll.length})</span>
-                                {RfidLoansAll.length > 0 && (
+                                <span>Select Items ({availableLoans.length})</span>
+                                {availableLoans.length > 0 && (
                                     <button
                                         onClick={toggleSelectAll}
                                         className="text-emerald-600 hover:underline"
                                     >
-                                        {checkedItems.length === RfidLoansAll.length ? "Clear All" : "Select All"}
+                                        {checkedItems.length === availableLoans.length ? "Clear All" : "Select All"}
                                     </button>
                                 )}
                             </div>
 
                             <div className="space-y-4">
-                                {RfidLoansAll.length === 0 ? (
+                                {availableLoans.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
                                         <AlertCircle
                                             size={48}
                                             className="mb-4"
                                         />
-                                        <p className="text-xs font-bold uppercase tracking-widest">No Items Found</p>
+                                        <p className="text-xs font-bold uppercase tracking-widest">No Items to Return</p>
+                                        <p className="mt-2 text-[10px] text-slate-400">Only items with "Release" status can be returned</p>
                                     </div>
                                 ) : (
-                                    RfidLoansAll.map((loan) => {
+                                    availableLoans.map((loan) => {
                                         const isChecked = checkedItems.some((item) => item.equipment?.equipmentId === loan.equipment?.equipmentId);
 
                                         return (
@@ -161,7 +165,7 @@ const ReturnModal = ({ isOpen, onClose, onConfirm, loading, RfidLoansAll = [] })
                                                             <Calendar size={10} /> {new Date(loan.createdAt).toLocaleDateString()}
                                                         </span>
                                                         <span className="h-1 w-1 rounded-full bg-slate-200"></span>
-                                                        <span className="text-emerald-500">Auto: In-Review</span>
+                                                        <span className="text-emerald-500">Ready for Return</span>
                                                     </div>
                                                 </div>
                                             </motion.div>

@@ -70,14 +70,6 @@ const DesktopNav = ({ scrollToSection }) => {
         setActiveNav(section);
         scrollToSection(section);
     };
-
-    return (
-        <nav className="hidden md:flex items-center gap-8">
-            <NavItem text="Home" isActive={activeNav === 'home'} onClick={() => handleNavClick('home')} />
-            <NavItem text="About" isActive={activeNav === 'about'} onClick={() => handleNavClick('about')} />
-            <NavItem text="Contact" isActive={activeNav === 'contact'} onClick={() => handleNavClick('contact')} />
-        </nav>
-    );
 };
 
 const NavItem = ({ text, onClick, isActive }) => (

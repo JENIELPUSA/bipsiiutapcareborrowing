@@ -7,11 +7,16 @@ const upload = require("../middleware/fileUploader");
 router
   .route("/")
   .get(authController.protect, BorrowerController.getAllBorrowers)
+
   .post(
     upload.single("avatar"),
     authController.protect,
-    BorrowerController.registerBorrower
+    BorrowerController.registerBorrower,
   );
+
+router
+  .route("/getSpecificBorrower/:rfidId")
+  .get(authController.protect, BorrowerController.getSpecificBorrower);
 
 router
   .route("/:id")

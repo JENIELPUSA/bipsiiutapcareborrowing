@@ -69,24 +69,56 @@ export const LaboratoryProvider = ({ children }) => {
             console.error("Error fetching dropdown:", err);
         }
     }, [authToken, backendURL, getHeaders]);
-
     const fetchcategorydropdown = useCallback(
         async ({ laboratoryId }) => {
-            console.log("inchargeId", laboratoryId);
-            if (!authToken || !laboratoryId) return;
+            console.log("laboratoryId", laboratoryId);
+
+            if (!authToken) {
+                console.warn("No auth token found.");
+                return;
+            }
+            if (!laboratoryId) {
+                console.warn("No laboratoryId provided.");
+                return;
+            }
 
             try {
-                const res = await axios.get(`${backendURL}/api/v1/Laboratory/getAllCategoryDropdown`, {
-                    ...getHeaders(),
-                    params: { laboratoryId },
-                });
+                const res = await axios.get(
+                    `${backendURL}/api/v1/Laboratory/getAllCategoryDropdown`,
+                    {
+                        params: { laboratoryId },
+                        headers: {
+                            Authorization: `Bearer ${authToken}`,
+                            "Cache-Control": "no-cache",
+                        },
+                    }
+                );
 
-                setCategories(res.data?.data || []);
+                if (res.data?.success) {
+                    setCategories(res.data.data || []);
+                } else {
+                    console.error(
+                        "Backend responded but success=false:",
+                        res.data?.message
+                    );
+                }
             } catch (err) {
-                console.error("Error fetching category dropdown:", err);
+                if (err.response) {
+                    // Request made and server responded
+                    console.error(
+                        `Server responded with ${err.response.status}:`,
+                        err.response.data
+                    );
+                } else if (err.request) {
+                    // Request made but no response
+                    console.error("No response received from server:", err.request);
+                } else {
+                    // Something else
+                    console.error("Error setting up request:", err.message);
+                }
             }
         },
-        [authToken, backendURL, getHeaders],
+        [authToken, backendURL]
     );
 
     // CREATE LABORATORY
@@ -115,7 +147,7 @@ export const LaboratoryProvider = ({ children }) => {
         async (id, updatedData) => {
             if (!authToken) return { success: false };
             try {
-                const res = await axios.put(`${backendURL}/api/v1/Laboratory/${id}`, updatedData, getHeaders());
+                const res = await axios.patch(`${backendURL}/api/v1/Laboratory/${id}`, updatedData, getHeaders());
                 if (res.data.success) {
                     await fetchLaboratories();
                     return { success: true };

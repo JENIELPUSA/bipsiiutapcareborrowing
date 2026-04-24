@@ -27,8 +27,7 @@ export const NotificationDisplayProvider = ({ children }) => {
 
             setunread(res.data.unreadCount);
 
-
-            console.log("Notification data",res.data.data)
+            console.log("Notification data", res.data.data);
             setNotify(res.data.data);
             setShowAll(showAllFlag);
         } catch (err) {
@@ -44,30 +43,36 @@ export const NotificationDisplayProvider = ({ children }) => {
 
     const markNotificationAsRead = async (notifId) => {
         if (!authToken) return console.error("Auth token is missing");
-        if (!linkId) return console.error("Link ID is missing");
-        if (!notifId) return console.error("Notification ID is missing");
+
+        // optional: allow bulk
+        const payload = notifId ? { notificationId: notifId, isRead: true } : { isRead: true };
 
         try {
-            await axiosInstance.patch(
-                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Notification/${notifId}/mark-read`,
-                { linkId },
-                {
-                    headers: {
-                        Authorization: `Bearer ${authToken}`,
-                    },
+            const res = await axiosInstance.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Notification/mark-read`, payload, {
+                headers: {
+                    Authorization: `Bearer ${authToken}`,
                 },
-            );
+            });
 
-            setNotify((prev) =>
-                prev.map((n) => {
-                    if (n._id === notifId) {
-                        // I-update lang yung viewer na tumutugma sa linkId
-                        const updatedViewers = n.viewers.map((v) => (v.user === linkId ? { ...v, isRead: true } : v));
-                        return { ...n, viewers: updatedViewers };
-                    }
-                    return n;
-                }),
-            );
+            // 🔥 BEST PRACTICE: use backend response if available
+            const updatedNotifications = res?.data?.notifications;
+
+            if (updatedNotifications) {
+                setNotify(updatedNotifications);
+                return;
+            }
+
+            // 🔥 fallback simple UI update
+            if (notifId) {
+                setNotify((prev) => prev.map((n) => (n._id === notifId ? { ...n, isRead: true } : n)));
+            } else {
+                setNotify((prev) =>
+                    prev.map((n) => ({
+                        ...n,
+                        isRead: true,
+                    })),
+                );
+            }
         } catch (error) {
             console.error("Failed to mark notification as read:", error);
         }

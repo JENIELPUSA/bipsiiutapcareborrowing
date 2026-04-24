@@ -1,5 +1,4 @@
 const AsyncErrorHandler = require("../Utils/AsyncErrorHandler");
-const Admin = require("../Models/AdminSchema");
 const UserLoginSchema = require("../Models/LogInSchema");
 const fs = require("fs");
 const axios = require("axios");
@@ -9,7 +8,7 @@ const FormData = require("form-data");
 exports.deleteAdmin = AsyncErrorHandler(async (req, res, next) => {
   const AdminID = req.params.id;
 
-  const existingAdmin = await Admin.findById(AdminID);
+  const existingAdmin = await UserLoginSchema.findById(AdminID);
   if (!existingAdmin) {
     return res.status(404).json({
       status: "fail",
@@ -22,7 +21,7 @@ exports.deleteAdmin = AsyncErrorHandler(async (req, res, next) => {
     await UserLoginSchema.findByIdAndDelete(userLogin._id);
   }
 
-  await Admin.findByIdAndDelete(AdminID);
+  await UserLoginSchema.findByIdAndDelete(AdminID);
 
   res.status(200).json({
     status: "success",
@@ -37,15 +36,11 @@ exports.deleteAdmin = AsyncErrorHandler(async (req, res, next) => {
     params.append("file", avatarUrl);
 
     axios
-      .post(
-        "https://localhost/delete.php",
-        params.toString(),
-        {
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
+      .post("https://localhost/delete.php", params.toString(), {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
         },
-      )
+      })
       .then((response) => {
         if (response.data.success) {
           console.log(
@@ -70,31 +65,30 @@ exports.deleteAdmin = AsyncErrorHandler(async (req, res, next) => {
 
 exports.DisplayAdmin = AsyncErrorHandler(async (req, res) => {
   try {
-    const {
-      page = 1,
-      limit = 10,
-      search = "",
-    } = req.query;
+    const { page = 1, limit = 10, search = "" } = req.query;
 
     const currentPage = Math.max(parseInt(page), 1);
     const perPage = Math.max(parseInt(limit), 1);
     const skip = (currentPage - 1) * perPage;
-    const searchQuery = search
-      ? {
-          $or: [
-            { first_name: { $regex: search, $options: "i" } },
-            { middle_name: { $regex: search, $options: "i" } },
-            { last_name: { $regex: search, $options: "i" } },
-          ],
-        }
-      : {};
 
-    const totalAdmin = await Admin.countDocuments(searchQuery);
+    const searchQuery = {
+      role: { $ne: "borrower" }, // ❌ exclude borrower
 
-    const adminResults = await Admin.find(searchQuery)
+      ...(search && {
+        $or: [
+          { first_name: { $regex: search, $options: "i" } },
+          { middle_name: { $regex: search, $options: "i" } },
+          { last_name: { $regex: search, $options: "i" } },
+        ],
+      }),
+    };
+
+    const totalAdmin = await UserLoginSchema.countDocuments(searchQuery);
+
+    const adminResults = await UserLoginSchema.find(searchQuery)
       .skip(skip)
       .limit(perPage)
-      .sort({ created_at: -1 }); 
+      .sort({ created_at: -1 });
 
     const totalPages = Math.ceil(totalAdmin / perPage);
 
@@ -118,10 +112,9 @@ exports.DisplayAdmin = AsyncErrorHandler(async (req, res) => {
   }
 });
 
-
 exports.DisplayProfile = AsyncErrorHandler(async (req, res) => {
   const loggedInAdminId = req.user.linkId;
-  const admin = await Admin.findById(loggedInAdminId);
+  const admin = await UserLoginSchema.findById(loggedInAdminId);
   if (!admin) {
     return res.status(404).json({
       status: "fail",
@@ -136,10 +129,11 @@ exports.DisplayProfile = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.UpdateAdmin = AsyncErrorHandler(async (req, res) => {
-
   const adminId = req.params.id;
+  const io = req.app.get("io");
 
-  const oldRecord = await Admin.findById(adminId);
+  console.log("req.body", req.body);
+  const oldRecord = await UserLoginSchema.findById(adminId);
   if (!oldRecord) {
     return res.status(404).json({ error: "Admin not found" });
   }
@@ -147,103 +141,136 @@ exports.UpdateAdmin = AsyncErrorHandler(async (req, res) => {
   let newAvatarUrl = oldRecord.avatar ? oldRecord.avatar.url : null;
   const oldAvatarUrl = oldRecord.avatar ? oldRecord.avatar.url : null;
 
+  // Image Validation
   if (req.file) {
     const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
     if (!allowedTypes.includes(req.file.mimetype)) {
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error("Failed to delete invalid temp file:", err);
-      });
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
       return res.status(400).json({ error: "Invalid image type" });
     }
   }
 
   try {
+    // Upload process
     if (req.file) {
       const form = new FormData();
-      form.append("file", fs.createReadStream(req.file.path), {
-        filename: req.file.originalname,
-        contentType: req.file.mimetype,
-      });
+      form.append("file", fs.createReadStream(req.file.path));
 
       const uploadResponse = await axios.post(
         "https://localhost.com/upload.php",
         form,
-        {
-          headers: form.getHeaders(),
-          maxBodyLength: Infinity,
-        },
+        { headers: form.getHeaders() },
       );
 
-      if (!uploadResponse.data.success) {
-        throw new Error(
-          uploadResponse.data.message || "Failed to upload new avatar",
-        );
+      if (uploadResponse.data.success) {
+        newAvatarUrl = uploadResponse.data.url;
       }
-
-      newAvatarUrl = uploadResponse.data.url;
-      console.log("New avatar uploaded:", newAvatarUrl);
     }
 
+    // Prepare Update Data
     const updateData = {
       first_name: req.body.first_name,
       last_name: req.body.last_name,
       middle_name: req.body.middle_name,
       email: req.body.email,
+      role: req.body.role,
       gender: req.body.gender,
+      laboratoryId: req.body.laboratoryId, // Siguraduhing na-a-update ang ID para sa lookup
     };
 
     if (req.file) {
-      updateData.avatar = {
-        ...oldRecord.avatar,
-        url: newAvatarUrl,
-      };
+      updateData.avatar = { ...oldRecord.avatar, url: newAvatarUrl };
     }
 
-    const updatedAdmin = await Admin.findByIdAndUpdate(adminId, updateData, {
-      new: true,
-    });
+    // Perform Update
+    const updatedAdminDoc = await UserLoginSchema.findByIdAndUpdate(
+      adminId,
+      updateData,
+      {
+        new: true,
+      },
+    );
 
-    if (!updatedAdmin) {
+    if (!updatedAdminDoc) {
       return res.status(404).json({ error: "Admin not found after update" });
     }
 
-    res.json({ status: "success", data: updatedAdmin });
+    // --- AYOS NA LOOKUP STARTS HERE ---
+    const adminWithLookup = await UserLoginSchema.aggregate([
+      {
+        $match: { _id: updatedAdminDoc._id },
+      },
+      {
+        $lookup: {
+          from: "laboratories",
+          localField: "laboratoryId",
+          foreignField: "_id",
+          as: "laboratory",
+        },
+      },
+      {
+        $unwind: {
+          path: "$laboratory",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          password: 0, // Itago ang sensitive info
+        },
+      },
+    ]);
 
-    if (req.file && oldAvatarUrl) {
+    // Kunin ang unang item sa array ng aggregate
+    const finalData = adminWithLookup[0] || updatedAdminDoc;
+
+    // Emit Socket Event
+    io.to("role:admin").emit("adminUpdated", {
+      payloads: finalData,
+    });
+
+    // Response
+    res.json({ status: "success", data: finalData });
+
+    // Background deletion of old image
+    if (req.file && oldAvatarUrl && oldAvatarUrl !== newAvatarUrl) {
       const params = new URLSearchParams();
       params.append("file", oldAvatarUrl);
-
       axios
-        .post(
-          "https://localhost/delete.php",
-          params.toString(),
-          { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
-        )
-        .then((response) => {
-          if (response.data.success) {
-            console.log("Old news image deleted in background:", oldAvatarUrl);
-          } else {
-            console.error(
-              "Failed to delete old news image in background:",
-              response.data.message,
-            );
-          }
+        .post("https://localhost/delete.php", params.toString(), {
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
         })
-        .catch((error) => {
-          console.error(
-            "Error deleting old news image in background:",
-            error.message,
-          );
-        });
+        .catch((err) => console.error("BG Delete Error:", err.message));
     }
   } catch (error) {
     console.error("UpdateAdmin Error:", error);
     res.status(500).json({ error: "Something went wrong." });
   } finally {
-    if (req.file) {
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error("Failed to delete temp file:", err);
-      });
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
     }
   }
+});
+
+exports.updateStatus = AsyncErrorHandler(async (req, res) => {
+  const { id } = req.params; // ID ng user/incharge na i-update
+
+  // Hanapin ang user sa database
+  const user = await UserLoginSchema.findById(id);
+  if (!user) {
+    return res.status(404).json({
+      status: "fail",
+      message: "User not found",
+    });
+  }
+
+  // Toggle status
+  user.status = user.status === "Active" ? "In-Active" : "Active";
+  await user.save();
+
+  res.status(200).json({
+    status: true,
+    message: `User status updated to ${user.status}`,
+    data: { _id: user._id, status: user.status },
+  });
 });

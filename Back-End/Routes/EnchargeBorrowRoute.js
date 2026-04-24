@@ -9,6 +9,10 @@ router
   .post(authController.protect, EnchargeBorrowerController.createLoan);
 
 router
+  .route("/getLatestEquipment")
+  .get(authController.protect, EnchargeBorrowerController.getLatestEquipment);
+
+router
   .route("/:id")
   .delete(authController.protect, EnchargeBorrowerController.deleteLoan)
   .patch(authController.protect, EnchargeBorrowerController.updateLoan);
@@ -16,6 +20,17 @@ router
 router
   .route("/rfidData/:rfidData")
   .get(authController.protect, EnchargeBorrowerController.useRFidGet);
+router
+  .route("/rfidData/:rfidData")
+  .get(authController.protect, EnchargeBorrowerController.useRFidGet);
+
+router
+  .route("/getSpecificData")
+  .get(authController.protect, EnchargeBorrowerController.getSpecificData);
+
+router
+  .route("/generateReport")
+  .get(authController.protect, EnchargeBorrowerController.generateReport);
 
 router
   .route("/ReturnLoan/:id")
