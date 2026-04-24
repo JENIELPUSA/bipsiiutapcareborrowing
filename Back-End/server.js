@@ -26,24 +26,35 @@ const io = socketIo(server, {
 });
 
 app.set("io", io);
+
 if (process.env.NODE_ENV === "development") {
-    const pythonCmd = process.platform === "win32" ? "py" : "python3";
-    const desktopPath = path.join(os.homedir(), "Desktop", "RFID-Bridge", "scan.py");
+  const pythonCmd = process.platform === "win32" ? "py" : "python3";
 
-    console.log(`🛠️ Dev Mode: Spawning local Python at ${desktopPath}`);
-    const rfidPython = spawn(pythonCmd, [desktopPath]);
+  const pythonScript = path.join(__dirname, "scan.py");
 
-    rfidPython.stdout.on('data', (data) => {
-        const cardUID = data.toString().trim();
-        if (cardUID && cardUID !== "NO_READER") {
-            console.log(`Local Scan: ${cardUID}`);
-            io.emit("rfid-scanned", { uid: cardUID, timestamp: new Date(), source: "Local-Spawn" });
-        }
-    });
+  console.log(`🛠️ Dev Mode: Spawning local Python at ${pythonScript}`);
 
-    rfidPython.stderr.on('data', (data) => console.error(`Python Error: ${data}`));
+  const rfidPython = spawn(pythonCmd, [pythonScript]);
+
+  rfidPython.stdout.on("data", (data) => {
+    const cardUID = data.toString().trim();
+
+    if (cardUID && cardUID !== "NO_READER") {
+      console.log(`Local Scan: ${cardUID}`);
+
+      io.emit("rfid-scanned", {
+        uid: cardUID,
+        timestamp: new Date(),
+        source: "Local-Spawn",
+      });
+    }
+  });
+
+  rfidPython.stderr.on("data", (data) => {
+    console.error(`Python Error: ${data}`);
+  });
 } else {
-    console.log("🚀 Production Mode: Waiting for remote RFID bridge from your Desktop...");
+  console.log("🚀 Production Mode: Waiting for remote RFID bridge...");
 }
 // Global storage para sa active connections
 global.connectedUsers = {};
