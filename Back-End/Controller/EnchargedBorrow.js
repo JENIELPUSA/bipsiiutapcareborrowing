@@ -856,8 +856,8 @@ exports.getLatestEquipment = AsyncErrorHandler(async (req, res) => {
   try {
     const mongoose = require("mongoose");
     let { page = 1, limit = 5, search = "", linkId } = req.query;
-    const role = req.user.role || linkId;
-    const userId = req.user._id;
+    const role = req.user.role;
+    const userId = req.user._id || linkId;
 
 
 
