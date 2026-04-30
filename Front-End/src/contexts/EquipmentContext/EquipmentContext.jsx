@@ -6,7 +6,7 @@ export const EquipmentContext = createContext();
 export const useEquipment = () => useContext(EquipmentContext);
 
 export const EquipmentProvider = ({ children }) => {
-    const { authToken,linkId } = useContext(AuthContext);
+    const { authToken, linkId } = useContext(AuthContext);
 
     const [isLoading, setIsLoading] = useState(false);
 
@@ -64,9 +64,13 @@ export const EquipmentProvider = ({ children }) => {
 
     const fetchDashboardCounts = useCallback(async () => {
         if (!authToken) return;
+        const params = {
+            linkId
+        };
 
         try {
             const res = await axios.get(`${backendURL}/api/v1/Equipment/getDashboardCounts`, {
+                params,
                 withCredentials: true,
                 headers: {
                     Authorization: `Bearer ${authToken}`,

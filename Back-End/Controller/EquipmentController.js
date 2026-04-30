@@ -11,7 +11,7 @@ exports.getAllEquipment = async (req, res) => {
     const userId = new mongoose.Types.ObjectId(req.user._id) || new mongoose.Types.ObjectId(linkId);
     page = parseInt(page);
     limit = parseInt(limit);
-    console.log("userId",userId)
+    console.log("userId", userId)
 
     const skip = (page - 1) * limit;
 
@@ -119,7 +119,8 @@ exports.getAllEquipment = async (req, res) => {
 
 exports.getDashboardCounts = AsyncErrorHandler(async (req, res, next) => {
   try {
-    const userId = req.user._id;
+    let { linkId } = req.query;
+    const userId = req.user._id || linkId;
     const role = req.user.role;
     const baseMatch =
       role === "in-charge"
