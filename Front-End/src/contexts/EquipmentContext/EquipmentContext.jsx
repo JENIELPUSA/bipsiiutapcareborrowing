@@ -60,7 +60,7 @@ export const EquipmentProvider = ({ children }) => {
         } finally {
             setIsLoading(false);
         }
-    }, [authToken, currentPage, rowsPerPage, searchQuery, backendURL]);
+    }, [authToken, currentPage, rowsPerPage, searchQuery, backendURL, linkId]);
 
     const fetchDashboardCounts = useCallback(async () => {
         if (!authToken) return;
@@ -83,7 +83,7 @@ export const EquipmentProvider = ({ children }) => {
         } catch (error) {
             console.error("Error fetching dashboard counts:", error);
         }
-    }, [authToken, backendURL]);
+    }, [authToken, backendURL,linkId]);
 
     // CREATE EQUIPMENT
     const createEquipment = useCallback(

@@ -8,7 +8,7 @@ exports.getAllEquipment = async (req, res) => {
   try {
     const mongoose = require("mongoose");
     let { page = 1, limit = 5, search = "", linkId } = req.query;
-    const userId = new mongoose.Types.ObjectId(req.user._id) || new mongoose.Types.ObjectId(linkId);
+    const userId =new mongoose.Types.ObjectId(linkId) || new mongoose.Types.ObjectId(req.user._id);
     page = parseInt(page);
     limit = parseInt(limit);
     console.log("userId", userId)
@@ -120,7 +120,7 @@ exports.getAllEquipment = async (req, res) => {
 exports.getDashboardCounts = AsyncErrorHandler(async (req, res, next) => {
   try {
     let { linkId } = req.query;
-    const userId = req.user._id || linkId;
+    const userId = linkId || req.user._id  ;
     const role = req.user.role;
     const baseMatch =
       role === "in-charge"
