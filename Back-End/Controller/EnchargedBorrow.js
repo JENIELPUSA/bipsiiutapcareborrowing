@@ -456,7 +456,6 @@ exports.useRFidGet = AsyncErrorHandler(async (req, res) => {
 exports.updateLoan = AsyncErrorHandler(async (req, res) => {
   try {
     const io = req.app.get("io");
-
     const { equipmentId, serialNumber, status, condition } = req.body;
     const loanId = req.params.id;
 
