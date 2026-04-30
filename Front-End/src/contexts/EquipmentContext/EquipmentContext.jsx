@@ -37,7 +37,7 @@ export const EquipmentProvider = ({ children }) => {
                 page: currentPage,
                 limit: rowsPerPage,
                 search: searchQuery,
-                linkId
+                linkId,
             };
 
             const res = await axios.get(`${backendURL}/api/v1/Equipment`, {
@@ -65,7 +65,7 @@ export const EquipmentProvider = ({ children }) => {
     const fetchDashboardCounts = useCallback(async () => {
         if (!authToken) return;
         const params = {
-            linkId
+            linkId,
         };
 
         try {
@@ -83,7 +83,7 @@ export const EquipmentProvider = ({ children }) => {
         } catch (error) {
             console.error("Error fetching dashboard counts:", error);
         }
-    }, [authToken, backendURL,linkId]);
+    }, [authToken, backendURL, linkId]);
 
     // CREATE EQUIPMENT
     const createEquipment = useCallback(
@@ -93,7 +93,12 @@ export const EquipmentProvider = ({ children }) => {
             setIsLoading(true);
 
             try {
-                const res = await axios.post(`${backendURL}/api/v1/Equipment`, data, {
+                const payload = {
+                    ...data,
+                    linkId, // dito mo idagdag
+                };
+
+                const res = await axios.post(`${backendURL}/api/v1/Equipment`, payload, {
                     withCredentials: true,
                     headers: {
                         Authorization: `Bearer ${authToken}`,
@@ -113,9 +118,8 @@ export const EquipmentProvider = ({ children }) => {
                 setIsLoading(false);
             }
         },
-        [authToken, backendURL],
+        [authToken, backendURL, linkId], // wag kalimutan
     );
-
     // UPDATE EQUIPMENT
     const updateEquipment = useCallback(
         async (id, data) => {

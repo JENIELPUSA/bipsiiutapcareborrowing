@@ -8,10 +8,12 @@ exports.getAllEquipment = async (req, res) => {
   try {
     const mongoose = require("mongoose");
     let { page = 1, limit = 5, search = "", linkId } = req.query;
-    const userId =new mongoose.Types.ObjectId(linkId) || new mongoose.Types.ObjectId(req.user._id);
+    const userId =
+      new mongoose.Types.ObjectId(linkId) ||
+      new mongoose.Types.ObjectId(req.user._id);
     page = parseInt(page);
     limit = parseInt(limit);
-    console.log("userId", userId)
+    console.log("userId", userId);
 
     const skip = (page - 1) * limit;
 
@@ -120,12 +122,9 @@ exports.getAllEquipment = async (req, res) => {
 exports.getDashboardCounts = AsyncErrorHandler(async (req, res, next) => {
   try {
     let { linkId } = req.query;
-    const userId = linkId || req.user._id  ;
+    const userId = linkId || req.user._id;
     const role = req.user.role;
-    const baseMatch =
-      role === "in-charge"
-        ? { inchargeId: userId }
-        : {};
+    const baseMatch = role === "in-charge" ? { inchargeId: userId } : {};
 
     const [totalAdmins, totalReleased, totalPending, totalAssets] =
       await Promise.all([
@@ -153,12 +152,11 @@ exports.getDashboardCounts = AsyncErrorHandler(async (req, res, next) => {
           { $count: "total" },
         ]).then((res) => res[0]?.total || 0),
 
-
         role === "admin"
           ? Equipment.countDocuments()
           : Equipment.countDocuments({
-            incharge: userId,
-          }),
+              incharge: userId,
+            }),
       ]);
     console.log({
       totalAdmins,
@@ -185,8 +183,11 @@ exports.getDashboardCounts = AsyncErrorHandler(async (req, res, next) => {
 exports.createEquipment = AsyncErrorHandler(async (req, res, next) => {
   try {
     const io = req.app.get("io"); // socket.io instance
-    const { equipment, category, brand, model, serialNo, status } = req.body;
-    const incharge = req.user._id;
+    const { equipment, category, brand, model, serialNo, status, linkId } =
+      req.body;
+    const incharge = new mongoose.Types.ObjectId(linkId)  || req.user._id;
+
+    console.log("incharge ID:", incharge);
 
     const newEquipment = new Equipment({
       equipment,
