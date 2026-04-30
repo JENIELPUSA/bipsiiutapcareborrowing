@@ -5,7 +5,7 @@ import SuccessFailed from "../../ReusableFolder/SuccessandField";
 export const LoanEquipmentContext = createContext();
 
 export const LoanEquipmentProvider = ({ children }) => {
-    const { authToken } = useContext(AuthContext);
+    const { authToken, linkId } = useContext(AuthContext);
     const backendURL = import.meta.env.VITE_REACT_APP_BACKEND_BASEURL;
     const [showModal, setShowModal] = useState(false);
     const [modalStatus, setModalStatus] = useState("success");
@@ -19,6 +19,8 @@ export const LoanEquipmentProvider = ({ children }) => {
     const [loading, setLoading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [limit, setLimit] = useState(5);
+
+
 
     const [pagination, setPagination] = useState({
         page: 1,
@@ -86,6 +88,7 @@ export const LoanEquipmentProvider = ({ children }) => {
                     page: currentPage,
                     limit: limit,
                     search: searchQuery || undefined,
+                    linkId
                 },
                 ...authHeaders,
             });

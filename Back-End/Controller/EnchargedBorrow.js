@@ -138,13 +138,13 @@ exports.getAllLoans = AsyncErrorHandler(async (req, res) => {
     // 🔍 SEARCH FILTER
     const searchFilter = search
       ? {
-          $or: [
-            { "borrower.name": { $regex: search, $options: "i" } },
-            { "incharge.name": { $regex: search, $options: "i" } },
-            { "equipmentIds.equipmentName": { $regex: search, $options: "i" } },
-            { "equipmentIds.serialNo": { $regex: search, $options: "i" } },
-          ],
-        }
+        $or: [
+          { "borrower.name": { $regex: search, $options: "i" } },
+          { "incharge.name": { $regex: search, $options: "i" } },
+          { "equipmentIds.equipmentName": { $regex: search, $options: "i" } },
+          { "equipmentIds.serialNo": { $regex: search, $options: "i" } },
+        ],
+      }
       : {};
 
     // 🔢 MAIN PIPELINE
@@ -424,9 +424,8 @@ exports.useRFidGet = AsyncErrorHandler(async (req, res) => {
       firstName: borrowerDoc.linkedId?.first_name,
       lastName: borrowerDoc.linkedId?.last_name,
 
-      fullName: `${borrowerDoc.linkedId?.first_name || ""} ${
-        borrowerDoc.linkedId?.last_name || ""
-      }`.trim(),
+      fullName: `${borrowerDoc.linkedId?.first_name || ""} ${borrowerDoc.linkedId?.last_name || ""
+        }`.trim(),
 
       avatar:
         borrowerDoc.linkedId?.avatar?.url ||
@@ -856,10 +855,13 @@ exports.ReturnLoan = AsyncErrorHandler(async (req, res) => {
 exports.getLatestEquipment = AsyncErrorHandler(async (req, res) => {
   try {
     const mongoose = require("mongoose");
-
-    const role = req.user.role;
+    let { page = 1, limit = 5, search = "", linkId } = req.query;
+    const role = req.user.role || linkId;
     const userId = req.user._id;
-    let { page = 1, limit = 5, search = "" } = req.query;
+
+
+
+    console.log("role", role)
 
     page = Math.max(1, parseInt(page) || 1);
     limit = Math.min(100, Math.max(1, parseInt(limit)));
@@ -867,17 +869,15 @@ exports.getLatestEquipment = AsyncErrorHandler(async (req, res) => {
 
     const cleanSearch = search?.trim().replace(/\s+/g, " ");
     const searchTerms = cleanSearch ? cleanSearch.split(" ") : [];
-
-    // 🔥 ROLE-BASED FILTER (IMPORTANT FIX)
     const matchFilter =
       role?.toLowerCase() === "admin"
         ? {} // admin = all data
         : {
-            $or: [
-              { borrowerId: new mongoose.Types.ObjectId(userId) },
-              { inchargeId: new mongoose.Types.ObjectId(userId) },
-            ],
-          };
+          $or: [
+            { borrowerId: new mongoose.Types.ObjectId(userId) },
+            { inchargeId: new mongoose.Types.ObjectId(userId) },
+          ],
+        };
 
     const pipeline = [
       // 🔥 APPLY FILTER EARLY
@@ -998,24 +998,24 @@ exports.getLatestEquipment = AsyncErrorHandler(async (req, res) => {
       // 🔥 SEARCH
       ...(searchTerms.length
         ? [
-            {
-              $match: {
-                $and: searchTerms.map((term) => ({
-                  $or: [
-                    { borrowerFullName: { $regex: term, $options: "i" } },
-                    { "borrower.rfidId": { $regex: term, $options: "i" } },
-                    { "incharge.fullName": { $regex: term, $options: "i" } },
-                    {
-                      "equipmentIds.categoryName": {
-                        $regex: term,
-                        $options: "i",
-                      },
+          {
+            $match: {
+              $and: searchTerms.map((term) => ({
+                $or: [
+                  { borrowerFullName: { $regex: term, $options: "i" } },
+                  { "borrower.rfidId": { $regex: term, $options: "i" } },
+                  { "incharge.fullName": { $regex: term, $options: "i" } },
+                  {
+                    "equipmentIds.categoryName": {
+                      $regex: term,
+                      $options: "i",
                     },
-                  ],
-                })),
-              },
+                  },
+                ],
+              })),
             },
-          ]
+          },
+        ]
         : []),
 
       // ✅ GROUP
@@ -1326,10 +1326,10 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
     return isNaN(d.getTime())
       ? fallback
       : d.toLocaleDateString("en-PH", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        });
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
   };
 
   // Logo (optional)
