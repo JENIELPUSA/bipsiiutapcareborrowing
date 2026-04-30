@@ -7,13 +7,11 @@ const EquipmentSchema = require("../Models/EnchargeBorroweSchema");
 exports.getAllEquipment = async (req, res) => {
   try {
     const mongoose = require("mongoose");
-
-    const userId = new mongoose.Types.ObjectId(req.user._id);
-
-    let { page = 1, limit = 5, search = "" } = req.query;
-
+    let { page = 1, limit = 5, search = "", linkId } = req.query;
+    const userId = new mongoose.Types.ObjectId(req.user._id) || new mongoose.Types.ObjectId(linkId);
     page = parseInt(page);
     limit = parseInt(limit);
+    console.log("userId",userId)
 
     const skip = (page - 1) * limit;
 
@@ -123,46 +121,44 @@ exports.getDashboardCounts = AsyncErrorHandler(async (req, res, next) => {
   try {
     const userId = req.user._id;
     const role = req.user.role;
-
-    // 📌 filter per role
     const baseMatch =
       role === "in-charge"
         ? { inchargeId: userId }
         : {};
 
-  const [totalAdmins, totalReleased, totalPending, totalAssets] =
-  await Promise.all([
-    userloginSchema.countDocuments(),
+    const [totalAdmins, totalReleased, totalPending, totalAssets] =
+      await Promise.all([
+        userloginSchema.countDocuments(),
 
-    EquipmentSchema.aggregate([
-      { $match: baseMatch },
-      { $unwind: "$equipmentIds" },
-      {
-        $match: {
-          "equipmentIds.status": "Release",
-        },
-      },
-      { $count: "total" },
-    ]).then((res) => res[0]?.total || 0),
+        EquipmentSchema.aggregate([
+          { $match: baseMatch },
+          { $unwind: "$equipmentIds" },
+          {
+            $match: {
+              "equipmentIds.status": "Release",
+            },
+          },
+          { $count: "total" },
+        ]).then((res) => res[0]?.total || 0),
 
-    EquipmentSchema.aggregate([
-      { $match: baseMatch },
-      { $unwind: "$equipmentIds" },
-      {
-        $match: {
-          "equipmentIds.status": "Pending",
-        },
-      },
-      { $count: "total" },
-    ]).then((res) => res[0]?.total || 0),
+        EquipmentSchema.aggregate([
+          { $match: baseMatch },
+          { $unwind: "$equipmentIds" },
+          {
+            $match: {
+              "equipmentIds.status": "Pending",
+            },
+          },
+          { $count: "total" },
+        ]).then((res) => res[0]?.total || 0),
 
 
-    role === "admin"
-      ? Equipment.countDocuments()
-      : Equipment.countDocuments({
-          incharge: userId,
-        }),
-  ]);
+        role === "admin"
+          ? Equipment.countDocuments()
+          : Equipment.countDocuments({
+            incharge: userId,
+          }),
+      ]);
     console.log({
       totalAdmins,
       totalReleased,

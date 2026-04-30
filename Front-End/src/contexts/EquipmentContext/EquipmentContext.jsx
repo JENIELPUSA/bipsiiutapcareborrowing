@@ -6,7 +6,7 @@ export const EquipmentContext = createContext();
 export const useEquipment = () => useContext(EquipmentContext);
 
 export const EquipmentProvider = ({ children }) => {
-    const { authToken } = useContext(AuthContext);
+    const { authToken,linkId } = useContext(AuthContext);
 
     const [isLoading, setIsLoading] = useState(false);
 
@@ -37,6 +37,7 @@ export const EquipmentProvider = ({ children }) => {
                 page: currentPage,
                 limit: rowsPerPage,
                 search: searchQuery,
+                linkId
             };
 
             const res = await axios.get(`${backendURL}/api/v1/Equipment`, {
