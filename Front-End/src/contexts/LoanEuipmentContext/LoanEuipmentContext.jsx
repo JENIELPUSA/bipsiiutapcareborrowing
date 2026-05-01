@@ -20,8 +20,6 @@ export const LoanEquipmentProvider = ({ children }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [limit, setLimit] = useState(5);
 
-
-
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 5,
@@ -88,7 +86,7 @@ export const LoanEquipmentProvider = ({ children }) => {
                     page: currentPage,
                     limit: limit,
                     search: searchQuery || undefined,
-                    linkId
+                    linkId,
                 },
                 ...authHeaders,
             });
@@ -221,7 +219,6 @@ export const LoanEquipmentProvider = ({ children }) => {
         }
     };
 
-    // Download report function (inayos para gumamit ng auth token at iwas alert)
     const downloadEnchargeBorrowReport = useCallback(
         async (filters = {}) => {
             if (!authToken) {
@@ -232,6 +229,9 @@ export const LoanEquipmentProvider = ({ children }) => {
                 const params = new URLSearchParams();
                 if (filters.status && filters.status !== "All") {
                     params.append("status", filters.status);
+                }
+                if (linkId) {
+                    params.append("linkId", linkId);
                 }
                 if (filters.dateFrom) {
                     params.append("dateFrom", filters.dateFrom);
@@ -277,9 +277,8 @@ export const LoanEquipmentProvider = ({ children }) => {
                 return false;
             }
         },
-        [authToken, backendURL],
+        [authToken, backendURL, linkId],
     );
-
     // --- Effects ---
     useEffect(() => {
         fetchEquipmentData();

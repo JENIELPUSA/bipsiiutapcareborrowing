@@ -129,27 +129,27 @@ const EquipmentCategoryRegistry = () => {
             {/* HEADER SECTION */}
             <div className="flex flex-col items-end justify-between gap-4 md:flex-row">
                 <div className="space-y-1">
-                    <h2 className="text-3xl font-black uppercase tracking-tighter text-[#1e40af] dark:text-slate-50">
-                        EQUIPMENT <span className="text-[#facc15]">CATEGORIES</span>
+                    <h2 className="text-3xl font-black uppercase tracking-tighter text-[#1e40af] dark:text-slate-100">
+                        EQUIPMENT <span className="text-[#facc15] dark:text-[#fbbf24]">CATEGORIES</span>
                     </h2>
                     <div className="flex items-center gap-2">
-                        <span className="h-1 w-8 rounded-full bg-[#facc15]"></span>
-                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Inventory Classification</p>
+                        <span className="h-1 w-8 rounded-full bg-[#facc15] dark:bg-[#fbbf24]"></span>
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Inventory Classification</p>
                     </div>
                 </div>
 
                 <div className="flex w-full items-center gap-3 md:w-auto">
                     <div className="group relative flex-1 md:w-80">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={18} />
                         <input
                             type="text"
                             placeholder="Search..."
-                            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-12 pr-4 text-sm outline-none focus:ring-2 focus:ring-[#1e40af] dark:border-slate-800 dark:bg-slate-900"
+                            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-12 pr-4 text-sm outline-none focus:ring-2 focus:ring-[#1e40af] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:ring-[#3b82f6]"
                             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                         />
                     </div>
-                    <button onClick={handleAddClick} className="flex items-center gap-2 rounded-2xl bg-[#1e40af] px-6 py-3 text-xs font-black text-white shadow-lg active:scale-95 transition-transform">
-                        <PlusCircle size={18} className="text-[#facc15]" /> ADD
+                    <button onClick={handleAddClick} className="flex items-center gap-2 rounded-2xl bg-[#1e40af] px-6 py-3 text-xs font-black text-white shadow-lg active:scale-95 transition-transform dark:bg-[#1e3a8a]">
+                        <PlusCircle size={18} className="text-[#facc15] dark:text-[#fbbf24]" /> ADD
                     </button>
                 </div>
             </div>
@@ -159,17 +159,17 @@ const EquipmentCategoryRegistry = () => {
                 <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                         <thead>
-                            <tr className="bg-[#1e40af]">
-                                <th className="border border-[#1e3a8a] px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-white">
+                            <tr className="bg-[#1e40af] dark:bg-[#1e3a8a]">
+                                <th className="border border-[#1e3a8a] dark:border-[#1e3a8a] px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-white">
                                     Category Name
                                 </th>
-                                <th className="border border-[#1e3a8a] px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-white">
+                                <th className="border border-[#1e3a8a] dark:border-[#1e3a8a] px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-white">
                                     Description
                                 </th>
-                                <th className="border border-[#1e3a8a] px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-white">
+                                <th className="border border-[#1e3a8a] dark:border-[#1e3a8a] px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-white">
                                     Assets
                                 </th>
-                                <th className="border border-[#1e3a8a] px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-white">
+                                <th className="border border-[#1e3a8a] dark:border-[#1e3a8a] px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-white">
                                     Actions
                                 </th>
                             </tr>
@@ -179,7 +179,7 @@ const EquipmentCategoryRegistry = () => {
                                 <tr key={cat._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                     <td className="border border-slate-200 px-6 py-4 align-top dark:border-slate-700">
                                         <div className="flex items-center gap-3">
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#1e40af] to-blue-600 text-[#facc15] shadow-md">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#1e40af] to-blue-600 text-[#facc15] shadow-md dark:from-[#1e3a8a] dark:to-blue-500 dark:text-[#fbbf24]">
                                                 <Tag size={16} />
                                             </div>
                                             <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
@@ -193,7 +193,7 @@ const EquipmentCategoryRegistry = () => {
                                         </p>
                                     </td>
                                     <td className="border border-slate-200 px-6 py-4 text-center align-top dark:border-slate-700">
-                                        <div className="inline-flex items-center justify-center rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-black text-[#1e40af] dark:bg-blue-900/20 dark:text-blue-300">
+                                        <div className="inline-flex items-center justify-center rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-black text-[#1e40af] dark:bg-blue-900/30 dark:text-blue-400">
                                             {cat.equipmentCount || 0}
                                         </div>
                                     </td>
@@ -201,21 +201,21 @@ const EquipmentCategoryRegistry = () => {
                                         <div className="flex justify-center gap-2">
                                             <button 
                                                 onClick={() => handleViewClick(cat)} 
-                                                className="p-1.5 text-slate-500 transition-colors hover:text-blue-600"
+                                                className="p-1.5 text-slate-500 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                                                 title="View Equipment"
                                             >
                                                 <Eye size={18} />
                                             </button>
                                             <button 
                                                 onClick={(e) => handleEditClick(e, cat)} 
-                                                className="p-1.5 text-slate-500 transition-colors hover:text-amber-600"
+                                                className="p-1.5 text-slate-500 transition-colors hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400"
                                                 title="Edit Category"
                                             >
                                                 <Edit2 size={18} />
                                             </button>
                                             <button 
                                                 onClick={(e) => handleDeleteClick(e, cat._id)} 
-                                                className="p-1.5 text-slate-500 transition-colors hover:text-red-600"
+                                                className="p-1.5 text-slate-500 transition-colors hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400"
                                                 title="Delete Category"
                                             >
                                                 <Trash2 size={18} />
@@ -230,16 +230,16 @@ const EquipmentCategoryRegistry = () => {
 
                 {/* PAGINATION */}
                 <div className="flex flex-col items-center justify-between gap-4 border-t border-slate-200 bg-slate-50/50 px-6 py-4 dark:border-slate-700 dark:bg-slate-900/30 md:flex-row">
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
-                        Showing <span className="text-[#1e40af] dark:text-[#facc15]">{categories?.length || 0}</span> of{" "}
-                        <span className="text-slate-800 dark:text-slate-100">{totalCategoryCount || 0}</span> Entries
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+                        Showing <span className="text-[#1e40af] dark:text-[#3b82f6]">{categories?.length || 0}</span> of{" "}
+                        <span className="text-slate-800 dark:text-slate-200">{totalCategoryCount || 0}</span> Entries
                     </p>
 
                     <div className="flex items-center gap-2">
                         <button
                             disabled={currentPage === 1}
                             onClick={() => setCurrentPage(p => p - 1)}
-                            className="flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-wider text-slate-600 transition-all hover:bg-slate-50 disabled:opacity-30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                            className="flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-wider text-slate-600 transition-all hover:bg-slate-50 disabled:opacity-30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
                         >
                             <ChevronLeft size={12} /> Prev
                         </button>
@@ -258,8 +258,8 @@ const EquipmentCategoryRegistry = () => {
                                         onClick={() => setCurrentPage(pageNum)}
                                         className={`h-8 w-8 rounded-lg text-[9px] font-black transition-all ${
                                             currentPage === pageNum
-                                                ? "bg-[#1e40af] text-white shadow-md"
-                                                : "bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                                                ? "bg-[#1e40af] text-white shadow-md dark:bg-[#3b82f6]"
+                                                : "bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
                                         }`}
                                     >
                                         {pageNum}
@@ -271,14 +271,14 @@ const EquipmentCategoryRegistry = () => {
                         <button
                             disabled={currentPage === totalPages}
                             onClick={() => setCurrentPage(p => p + 1)}
-                            className="flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-wider text-slate-600 transition-all hover:bg-slate-50 disabled:opacity-30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                            className="flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[9px] font-black uppercase tracking-wider text-slate-600 transition-all hover:bg-slate-50 disabled:opacity-30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
                         >
                             Next <ChevronRight size={12} />
                         </button>
                     </div>
 
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
-                        Page <span className="text-[#1e40af] dark:text-[#facc15]">{currentPage}</span> of {totalPages || 1}
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+                        Page <span className="text-[#1e40af] dark:text-[#3b82f6]">{currentPage}</span> of {totalPages || 1}
                     </p>
                 </div>
             </div>
@@ -293,7 +293,7 @@ const EquipmentCategoryRegistry = () => {
                             animate={{ opacity: 1 }} 
                             exit={{ opacity: 0 }} 
                             onClick={() => setIsRightSideOpen(false)} 
-                            className="fixed inset-0 bg-[#1e40af]/10 backdrop-blur-md" 
+                            className="fixed inset-0 bg-[#1e40af]/10 backdrop-blur-md dark:bg-black/50" 
                         />
                         
                         {/* Sidebar Content */}
@@ -319,20 +319,20 @@ const EquipmentCategoryRegistry = () => {
                             animate={{ opacity: 1 }} 
                             exit={{ opacity: 0 }} 
                             onClick={() => setIsModalOpen(false)} 
-                            className="fixed inset-0 " 
+                            className="fixed  dark:bg-black/70" 
                         />
                         
                         <motion.div 
                             initial={{ scale: 0.9, opacity: 0, y: 20 }} 
                             animate={{ scale: 1, opacity: 1, y: 0 }} 
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="relative z-[161] w-full max-w-lg mx-4 overflow-hidden rounded-2xl border-b-[6px] border-[#facc15] bg-white shadow-2xl dark:bg-slate-900"
+                            className="relative z-[161] w-full max-w-lg mx-4 overflow-hidden rounded-2xl border-b-[6px] border-[#facc15] bg-white shadow-2xl dark:border-[#fbbf24] dark:bg-slate-900"
                         >
-                            <div className="bg-[#1e40af] p-6 text-white">
+                            <div className="bg-[#1e40af] p-6 text-white dark:bg-[#1e3a8a]">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <h3 className="text-xl font-black uppercase tracking-tight">
-                                            {isEditing ? "Update" : "New"} <span className="text-[#facc15]">Category</span>
+                                            {isEditing ? "Update" : "New"} <span className="text-[#facc15] dark:text-[#fbbf24]">Category</span>
                                         </h3>
                                         <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-white/50">
                                             Fill out category details
@@ -348,29 +348,29 @@ const EquipmentCategoryRegistry = () => {
                             </div>
                             <form onSubmit={handleSubmit} className="space-y-4 p-6">
                                 <div className="space-y-1">
-                                    <label className="ml-1 text-[10px] font-black uppercase text-slate-400">Category Name</label>
+                                    <label className="ml-1 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Category Name</label>
                                     <input 
                                         ref={nameRef} 
                                         defaultValue={selectedCategory?.categoryName || ""} 
                                         required 
                                         placeholder="e.g., Laptops, Monitors, Projectors" 
-                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[#1e40af] focus:ring-1 focus:ring-[#1e40af] dark:border-slate-700 dark:bg-slate-800 dark:text-white transition-all" 
+                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[#1e40af] focus:ring-1 focus:ring-[#1e40af] dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-[#3b82f6] dark:focus:ring-[#3b82f6] transition-all" 
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="ml-1 text-[10px] font-black uppercase text-slate-400">Description</label>
+                                    <label className="ml-1 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Description</label>
                                     <textarea 
                                         ref={descRef} 
                                         defaultValue={selectedCategory?.discription || ""} 
                                         required 
                                         rows={4} 
                                         placeholder="Describe the equipment category..." 
-                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[#1e40af] focus:ring-1 focus:ring-[#1e40af] dark:border-slate-700 dark:bg-slate-800 dark:text-white transition-all resize-none" 
+                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[#1e40af] focus:ring-1 focus:ring-[#1e40af] dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-[#3b82f6] dark:focus:ring-[#3b82f6] transition-all resize-none" 
                                     />
                                 </div>
                                 <button 
                                     type="submit" 
-                                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#facc15] py-3.5 text-xs font-black uppercase tracking-widest text-[#1e40af] shadow-lg transition-all hover:brightness-105 active:scale-[0.98]"
+                                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#facc15] py-3.5 text-xs font-black uppercase tracking-widest text-[#1e40af] shadow-lg transition-all hover:brightness-105 active:scale-[0.98] dark:bg-[#fbbf24] dark:text-[#1e3a8a]"
                                 >
                                     <PlusCircle size={16} />
                                     {isEditing ? "UPDATE CATEGORY" : "CREATE CATEGORY"}

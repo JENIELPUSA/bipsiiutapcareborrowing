@@ -106,13 +106,6 @@ const LoginFormContent = ({ values, handleInput, handleLoginSubmit, isLoading, s
 
         <div className="flex items-center justify-between">
             <ShowPasswordCheckbox showPassword={showPassword} setShowPassword={setShowPassword} />
-            <button
-                type="button"
-                className="text-xs font-bold uppercase text-blue-900 transition hover:text-yellow-600"
-                onClick={() => setForgotPassword && setForgotPassword(true)}
-            >
-                Forgot?
-            </button>
         </div>
 
         <LoginButton isLoading={isLoading} />

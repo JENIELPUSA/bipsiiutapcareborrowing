@@ -39,7 +39,7 @@ const Counter = ({ value }) => {
 const Card = ({ children, className = "", style = {} }) => (
     <div
         style={style}
-        className={`rounded-xl border border-slate-100 bg-white shadow-sm transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-900 ${className}`}
+        className={`rounded-xl border border-slate-100 bg-white shadow-sm transition-all hover:shadow-md dark:border-slate-700 dark:bg-slate-900 ${className}`}
     >
         {children}
     </div>
@@ -68,16 +68,16 @@ const ReportFilterModal = ({ isOpen, onClose, onGenerate, isGenerating }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 dark:bg-black/70">
             <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900"
             >
                 <div className="mb-4 flex items-center justify-between">
-                    <h3 className="text-xl font-bold text-[#1e40af] dark:text-white">Generate Report</h3>
+                    <h3 className="text-xl font-bold text-[#1e40af] dark:text-slate-100">Generate Report</h3>
                     <button onClick={onClose} className="rounded-full p-1 hover:bg-slate-100 dark:hover:bg-slate-800">
-                        <X className="h-5 w-5 text-slate-500" />
+                        <X className="h-5 w-5 text-slate-500 dark:text-slate-400" />
                     </button>
                 </div>
                 <form onSubmit={handleSubmit}>
@@ -86,7 +86,7 @@ const ReportFilterModal = ({ isOpen, onClose, onGenerate, isGenerating }) => {
                         <select
                             value={status}
                             onChange={(e) => setStatus(e.target.value)}
-                            className="w-full rounded-lg border border-slate-300 p-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                            className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-700 focus:ring-2 focus:ring-[#1e40af] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:ring-[#3b82f6]"
                         >
                             <option value="All">All</option>
                             <option value="Missing">Missing</option>
@@ -101,7 +101,7 @@ const ReportFilterModal = ({ isOpen, onClose, onGenerate, isGenerating }) => {
                                 type="date"
                                 value={dateFrom}
                                 onChange={(e) => setDateFrom(e.target.value)}
-                                className="w-full rounded-lg border border-slate-300 p-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                className="w-full rounded-lg border border-slate-300 bg-white p-2 text-sm text-slate-700 focus:ring-2 focus:ring-[#1e40af] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:ring-[#3b82f6]"
                             />
                         </div>
                         <div>
@@ -110,13 +110,15 @@ const ReportFilterModal = ({ isOpen, onClose, onGenerate, isGenerating }) => {
                                 type="date"
                                 value={dateTo}
                                 onChange={(e) => setDateTo(e.target.value)}
-                                className="w-full rounded-lg border border-slate-300 p-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                className="w-full rounded-lg border border-slate-300 bg-white p-2 text-sm text-slate-700 focus:ring-2 focus:ring-[#1e40af] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:ring-[#3b82f6]"
                             />
                         </div>
                     </div>
                     <div className="flex gap-3">
-                        <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
-                        <button type="submit" disabled={isGenerating} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#1e40af] px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+                        <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                            Cancel
+                        </button>
+                        <button type="submit" disabled={isGenerating} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#1e40af] px-4 py-2 text-sm font-bold text-white hover:bg-[#1e3a8a] disabled:opacity-50 dark:bg-[#1e3a8a] dark:hover:bg-[#1e40af]">
                             {isGenerating ? <Loader2 className="animate-spin h-4 w-4" /> : "Download PDF"}
                         </button>
                     </div>
@@ -142,7 +144,10 @@ export default function App() {
         
         // Fetch both data sets in parallel
         const promises = [];
-    
+        
+        if (fetchDashboardCounts) {
+            promises.push(fetchDashboardCounts());
+        }
         
         if (fetchLatestEquipment) {
             promises.push(fetchLatestEquipment());
@@ -154,7 +159,7 @@ export default function App() {
             await Promise.all(promises);
             console.log("Dashboard data fetch completed");
         }
-    }, [fetchLatestEquipment]);
+    }, [fetchDashboardCounts, fetchLatestEquipment]);
 
     // Manual refresh handler
     const handleManualRefresh = async () => {
@@ -216,11 +221,13 @@ export default function App() {
         };
     }, [fetchDashboardData]);
 
+    console.log("Rendering dashboard with counts:", dashboardCounts);
+
     const getCards = () => {
         const baseCards = [
-            { title: "Total Assets", value: dashboardCounts?.totalAssets || 0, icon: Package, accent: "text-[#1e40af]" },
-            { title: "On Loan", value: dashboardCounts?.totalReleased || 0, icon: Clock, accent: "text-[#facc15]" },
-            { title: "Pending", value: dashboardCounts?.totalPending || 0, icon: CheckCircle, accent: "text-blue-600" },
+            { title: "Total Assets", value: dashboardCounts?.totalAssets || 0, icon: Package, accent: "text-[#1e40af] dark:text-[#3b82f6]" },
+            { title: "On Loan", value: dashboardCounts?.totalReleased || 0, icon: Clock, accent: "text-[#facc15] dark:text-[#fbbf24]" },
+            { title: "Pending", value: dashboardCounts?.totalPending || 0, icon: CheckCircle, accent: "text-blue-600 dark:text-blue-400" },
         ];
         
         // Only add Total Admins card if role is admin
@@ -229,7 +236,7 @@ export default function App() {
                 title: "Total Admin", 
                 value: dashboardCounts?.totalAdmins || 0, 
                 icon: Users, 
-                accent: "text-[#1e40af]" 
+                accent: "text-[#1e40af] dark:text-[#3b82f6]" 
             });
         }
         
@@ -258,12 +265,12 @@ export default function App() {
             <div className="min-h-screen rounded-3xl bg-slate-50 p-4 font-sans dark:bg-slate-950 md:p-8">
                 <header className="mx-auto mb-10 flex max-w-7xl flex-col justify-between gap-6 border-b border-slate-200 pb-8 dark:border-slate-800 md:flex-row md:items-center">
                     <div className="flex items-center gap-5">
-                        <div className="rounded-xl bg-[#1e40af] p-4 shadow-lg">
-                            <Shield className="h-8 w-8 text-[#facc15]" />
+                        <div className="rounded-xl bg-[#1e40af] p-4 shadow-lg dark:bg-[#1e3a8a]">
+                            <Shield className="h-8 w-8 text-[#facc15] dark:text-[#fbbf24]" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-black text-[#1e40af] dark:text-slate-50">Dashboard</h1>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-slate-400">Enterprise Asset Intelligence</p>
+                            <h1 className="text-3xl font-black text-[#1e40af] dark:text-slate-100">Dashboard</h1>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-slate-400 dark:text-slate-500">Enterprise Asset Intelligence</p>
                         </div>
                     </div>
                 </header>
@@ -284,7 +291,7 @@ export default function App() {
                                     <Card className="border-l-4 h-full" style={{ borderLeftColor: index % 2 === 0 ? "#1e40af" : "#facc15" }}>
                                         <CardContent className="flex flex-col gap-4">
                                             <div className="flex items-center justify-between">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{card.title}</p>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">{card.title}</p>
                                                 <Icon className={`h-5 w-5 ${card.accent}`} />
                                             </div>
                                             <h2 className="text-4xl font-black text-slate-800 dark:text-slate-100">
@@ -298,21 +305,24 @@ export default function App() {
                     </div>
 
                     {/* TABLE AREA */}
-                    <div className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900">
-                        <div className="flex items-center justify-between border-b px-8 py-7">
+                    <div className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                        <div className="flex items-center justify-between border-b border-slate-100 px-8 py-7 dark:border-slate-800">
                             <div>
-                                <h2 className="text-xl font-bold text-[#1e40af]">Equipment Borrow</h2>
-                                <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-[#facc15]">Recent Transactions</p>
+                                <h2 className="text-xl font-bold text-[#1e40af] dark:text-[#3b82f6]">Equipment Borrow</h2>
+                                <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-[#facc15] dark:text-[#fbbf24]">Recent Transactions</p>
                             </div>
-                            <button onClick={() => setShowModal(true)} className="flex items-center gap-2 rounded-xl bg-[#1e40af] px-6 py-3 text-xs font-black text-white hover:bg-[#1e3a8a] transition-all">
-                                GENERATE REPORT <ArrowUpRight className="h-4 w-4 text-[#facc15]" />
+                            <button 
+                                onClick={() => setShowModal(true)} 
+                                className="flex items-center gap-2 rounded-xl bg-[#1e40af] px-6 py-3 text-xs font-black text-white transition-all hover:bg-[#1e3a8a] dark:bg-[#1e3a8a] dark:hover:bg-[#1e40af]"
+                            >
+                                GENERATE REPORT <ArrowUpRight className="h-4 w-4 text-[#facc15] dark:text-[#fbbf24]" />
                             </button>
                         </div>
 
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
                                 <thead>
-                                    <tr className="border-b bg-slate-50/50 text-[10px] font-black uppercase text-slate-400">
+                                    <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] font-black uppercase text-slate-400 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-500">
                                         <th className="px-8 py-5">Personnel</th>
                                         <th className="px-8 py-5">Asset / Serial</th>
                                         <th className="px-8 py-5">Date</th>
@@ -323,21 +333,23 @@ export default function App() {
                                     {latestEquipment?.length > 0 ? (
                                         latestEquipment.map((log) =>
                                             log.equipmentIds.map((item) => (
-                                                <tr key={item._id} className="border-b border-slate-50 hover:bg-slate-50/80">
+                                                <tr key={item._id} className="border-b border-slate-50 hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-800/50">
                                                     <td className="px-8 py-6">
-                                                        <div className="font-bold text-slate-700">{log.borrower?.fullName || "N/A"}</div>
-                                                        <div className="text-[9px] text-slate-400">RFID: {log.borrower?.rfidId}</div>
+                                                        <div className="font-bold text-slate-700 dark:text-slate-200">{log.borrower?.fullName || "N/A"}</div>
+                                                        <div className="text-[9px] text-slate-400 dark:text-slate-500">RFID: {log.borrower?.rfidId}</div>
                                                      </td>
                                                     <td className="px-8 py-6">
-                                                        <div className="font-bold text-slate-700">{item.categoryName}</div>
-                                                        <div className="text-xs text-slate-500">{item.serialNumber}</div>
+                                                        <div className="font-bold text-slate-700 dark:text-slate-200">{item.categoryName}</div>
+                                                        <div className="text-xs text-slate-500 dark:text-slate-400">{item.serialNumber}</div>
                                                      </td>
-                                                    <td className="px-8 py-6 text-xs text-slate-500">
+                                                    <td className="px-8 py-6 text-xs text-slate-500 dark:text-slate-400">
                                                         {new Date(log.createdAt).toLocaleDateString()}
                                                      </td>
                                                     <td className="px-8 py-6 text-center">
                                                         <span className={`inline-block w-24 rounded-lg px-2 py-1.5 text-[10px] font-black uppercase ${
-                                                            item.status === "Release" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"
+                                                            item.status === "Release" 
+                                                                ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" 
+                                                                : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                                                         }`}>
                                                             {item.status === "Release" ? "Borrowed" : item.status}
                                                         </span>
@@ -347,7 +359,7 @@ export default function App() {
                                         )
                                     ) : (
                                         <tr>
-                                            <td colSpan="4" className="py-20 text-center text-slate-400 italic">
+                                            <td colSpan="4" className="py-20 text-center text-slate-400 italic dark:text-slate-500">
                                                 No recent transactions.
                                             </td>
                                         </tr>

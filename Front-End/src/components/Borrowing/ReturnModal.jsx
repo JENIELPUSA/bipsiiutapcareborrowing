@@ -74,24 +74,24 @@ const ReturnModal = ({ isOpen, onClose, onConfirm, loading, RfidLoansAll = [] })
                         initial={{ scale: 0.9, opacity: 0, y: 10 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.9, opacity: 0, y: 10 }}
-                        className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl"
+                        className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl dark:bg-slate-900"
                     >
                         {/* HEADER */}
-                        <div className="border-b border-slate-50 bg-white px-8 py-7">
+                        <div className="border-b border-slate-50 bg-white px-8 py-7 dark:border-slate-800 dark:bg-slate-900">
                             <div className="flex items-center gap-5">
-                                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-100">
+                                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-100 dark:bg-emerald-600 dark:shadow-emerald-950/50">
                                     <PackageCheck size={28} />
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="text-2xl font-black uppercase leading-none tracking-tight text-slate-800">Return Units</h3>
-                                    <div className="mt-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-600">
+                                    <h3 className="text-2xl font-black uppercase leading-none tracking-tight text-slate-800 dark:text-slate-100">Return Units</h3>
+                                    <div className="mt-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-600 dark:text-emerald-400">
                                         <ShieldCheck size={12} />
                                         Setting status to: In-Review
                                     </div>
                                 </div>
                                 <button
                                     onClick={onClose}
-                                    className="rounded-full bg-slate-50 p-2 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600"
+                                    className="rounded-full bg-slate-50 p-2 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600 dark:bg-slate-800 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-300"
                                 >
                                     <X size={20} />
                                 </button>
@@ -99,13 +99,13 @@ const ReturnModal = ({ isOpen, onClose, onConfirm, loading, RfidLoansAll = [] })
                         </div>
 
                         {/* LIST BODY */}
-                        <div className="flex-1 overflow-y-auto bg-slate-50/40 p-8">
-                            <div className="mb-5 flex items-center justify-between px-2 text-[11px] font-black uppercase tracking-widest text-slate-400">
+                        <div className="flex-1 overflow-y-auto bg-slate-50/40 p-8 dark:bg-slate-900/50">
+                            <div className="mb-5 flex items-center justify-between px-2 text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
                                 <span>Select Items ({availableLoans.length})</span>
                                 {availableLoans.length > 0 && (
                                     <button
                                         onClick={toggleSelectAll}
-                                        className="text-emerald-600 hover:underline"
+                                        className="text-emerald-600 hover:underline dark:text-emerald-400"
                                     >
                                         {checkedItems.length === availableLoans.length ? "Clear All" : "Select All"}
                                     </button>
@@ -114,13 +114,13 @@ const ReturnModal = ({ isOpen, onClose, onConfirm, loading, RfidLoansAll = [] })
 
                             <div className="space-y-4">
                                 {availableLoans.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
+                                    <div className="flex flex-col items-center justify-center py-20 text-center opacity-40 dark:opacity-60">
                                         <AlertCircle
                                             size={48}
-                                            className="mb-4"
+                                            className="mb-4 text-slate-500 dark:text-slate-400"
                                         />
-                                        <p className="text-xs font-bold uppercase tracking-widest">No Items to Return</p>
-                                        <p className="mt-2 text-[10px] text-slate-400">Only items with "Release" status can be returned</p>
+                                        <p className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">No Items to Return</p>
+                                        <p className="mt-2 text-[10px] text-slate-400 dark:text-slate-500">Only items with "Release" status can be returned</p>
                                     </div>
                                 ) : (
                                     availableLoans.map((loan) => {
@@ -132,13 +132,13 @@ const ReturnModal = ({ isOpen, onClose, onConfirm, loading, RfidLoansAll = [] })
                                                 onClick={() => toggleReturnItem(loan)}
                                                 className={`group flex cursor-pointer items-center gap-5 rounded-2xl border-2 p-5 transition-all duration-300 ${
                                                     isChecked
-                                                        ? "border-emerald-500 bg-white shadow-xl shadow-emerald-50"
-                                                        : "border-transparent bg-white shadow-sm hover:border-emerald-200"
+                                                        ? "border-emerald-500 bg-white shadow-xl shadow-emerald-50 dark:border-emerald-500 dark:bg-slate-800 dark:shadow-emerald-950/30"
+                                                        : "border-transparent bg-white shadow-sm hover:border-emerald-200 dark:bg-slate-800 dark:hover:border-emerald-800"
                                                 }`}
                                             >
                                                 <div
                                                     className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border-2 transition-all ${
-                                                        isChecked ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-200 bg-slate-50"
+                                                        isChecked ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-700"
                                                     }`}
                                                 >
                                                     {isChecked && (
@@ -152,20 +152,20 @@ const ReturnModal = ({ isOpen, onClose, onConfirm, loading, RfidLoansAll = [] })
                                                 <div className="flex-1 overflow-hidden">
                                                     <div className="flex items-center justify-between gap-2">
                                                         <h4
-                                                            className={`truncate font-black uppercase tracking-tighter ${isChecked ? "text-emerald-700" : "text-slate-800"}`}
+                                                            className={`truncate font-black uppercase tracking-tighter ${isChecked ? "text-emerald-700 dark:text-emerald-400" : "text-slate-800 dark:text-slate-200"}`}
                                                         >
                                                             {loan.equipment?.categoryName}
                                                         </h4>
-                                                        <span className="shrink-0 font-mono text-[10px] font-black text-slate-400">
+                                                        <span className="shrink-0 font-mono text-[10px] font-black text-slate-400 dark:text-slate-500">
                                                             SN: {loan.equipment?.serialNumber}
                                                         </span>
                                                     </div>
-                                                    <div className="mt-1 flex items-center gap-3 text-[9px] font-bold uppercase text-slate-400">
+                                                    <div className="mt-1 flex items-center gap-3 text-[9px] font-bold uppercase text-slate-400 dark:text-slate-500">
                                                         <span className="flex items-center gap-1">
                                                             <Calendar size={10} /> {new Date(loan.createdAt).toLocaleDateString()}
                                                         </span>
-                                                        <span className="h-1 w-1 rounded-full bg-slate-200"></span>
-                                                        <span className="text-emerald-500">Ready for Return</span>
+                                                        <span className="h-1 w-1 rounded-full bg-slate-200 dark:bg-slate-700"></span>
+                                                        <span className="text-emerald-500 dark:text-emerald-400">Ready for Return</span>
                                                     </div>
                                                 </div>
                                             </motion.div>
@@ -176,22 +176,22 @@ const ReturnModal = ({ isOpen, onClose, onConfirm, loading, RfidLoansAll = [] })
                         </div>
 
                         {/* FOOTER ACTION */}
-                        <div className="flex items-center justify-between border-t border-slate-50 bg-white px-8 py-7">
+                        <div className="flex items-center justify-between border-t border-slate-50 bg-white px-8 py-7 dark:border-slate-800 dark:bg-slate-900">
                             <div className="text-left">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-300">Selected Count</p>
-                                <p className="text-xl font-black text-emerald-600">{checkedItems.length}</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-300 dark:text-slate-600">Selected Count</p>
+                                <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">{checkedItems.length}</p>
                             </div>
                             <div className="flex gap-4">
                                 <button
                                     onClick={onClose}
-                                    className="text-xs font-black uppercase tracking-widest text-slate-400 transition-colors hover:text-slate-600"
+                                    className="text-xs font-black uppercase tracking-widest text-slate-400 transition-colors hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleConfirm}
                                     disabled={loading || checkedItems.length === 0}
-                                    className="inline-flex items-center gap-3 rounded-2xl bg-slate-900 px-10 py-4 text-[11px] font-black uppercase tracking-[0.2em] text-white shadow-2xl transition-all hover:bg-emerald-600 active:scale-95 disabled:pointer-events-none disabled:bg-slate-100 disabled:text-slate-300"
+                                    className="inline-flex items-center gap-3 rounded-2xl bg-slate-900 px-10 py-4 text-[11px] font-black uppercase tracking-[0.2em] text-white shadow-2xl transition-all hover:bg-emerald-600 active:scale-95 disabled:pointer-events-none disabled:bg-slate-100 disabled:text-slate-300 dark:bg-slate-800 dark:hover:bg-emerald-600 dark:disabled:bg-slate-700 dark:disabled:text-slate-500"
                                 >
                                     {loading ? (
                                         <Loader2

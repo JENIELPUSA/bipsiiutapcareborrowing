@@ -4,6 +4,77 @@ const userloginSchema = require("../Models/LogInSchema");
 const Equipment = require("../Models/RegisterAssitsSchema");
 const EquipmentSchema = require("../Models/EnchargeBorroweSchema");
 
+exports.getDashboardCounts = AsyncErrorHandler(async (req, res, next) => {
+  try {
+    let { linkId } = req.query;
+
+    const rawUserId = linkId || req.user._id;
+    const role = req.user.role;
+
+    const userId = new mongoose.Types.ObjectId(rawUserId);
+
+    const baseMatch =
+      role === "in-charge"
+        ? { inchargeId: userId }
+        : {};
+
+    const [totalAdmins, totalReleased, totalPending, totalAssets] =
+      await Promise.all([
+        userloginSchema.countDocuments(),
+
+        EquipmentSchema.aggregate([
+          { $match: baseMatch },
+          { $unwind: "$equipmentIds" },
+          {
+            $match: {
+              "equipmentIds.status": "Release",
+            },
+          },
+          { $count: "total" },
+        ]).then((res) => res[0]?.total || 0),
+
+        EquipmentSchema.aggregate([
+          { $match: baseMatch },
+          { $unwind: "$equipmentIds" },
+          {
+            $match: {
+              "equipmentIds.status": "Pending",
+            },
+          },
+          { $count: "total" },
+        ]).then((res) => res[0]?.total || 0),
+
+        // ❗ HINDI GINALAW (as requested)
+        role === "admin"
+          ? Equipment.countDocuments()
+          : Equipment.countDocuments({
+              incharge: rawUserId, // same as original
+            }),
+      ]);
+
+    console.log({
+      userId: rawUserId,
+      role,
+      totalAdmins,
+      totalReleased,
+      totalPending,
+      totalAssets,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalAdmins,
+        totalReleased,
+        totalPending,
+        totalAssets,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 exports.getAllEquipment = async (req, res) => {
   try {
     const mongoose = require("mongoose");
@@ -119,65 +190,7 @@ exports.getAllEquipment = async (req, res) => {
   }
 };
 
-exports.getDashboardCounts = AsyncErrorHandler(async (req, res, next) => {
-  try {
-    let { linkId } = req.query;
-    const userId = linkId || req.user._id;
-    const role = req.user.role;
-    const baseMatch = role === "in-charge" ? { inchargeId: userId } : {};
 
-    const [totalAdmins, totalReleased, totalPending, totalAssets] =
-      await Promise.all([
-        userloginSchema.countDocuments(),
-
-        EquipmentSchema.aggregate([
-          { $match: baseMatch },
-          { $unwind: "$equipmentIds" },
-          {
-            $match: {
-              "equipmentIds.status": "Release",
-            },
-          },
-          { $count: "total" },
-        ]).then((res) => res[0]?.total || 0),
-
-        EquipmentSchema.aggregate([
-          { $match: baseMatch },
-          { $unwind: "$equipmentIds" },
-          {
-            $match: {
-              "equipmentIds.status": "Pending",
-            },
-          },
-          { $count: "total" },
-        ]).then((res) => res[0]?.total || 0),
-
-        role === "admin"
-          ? Equipment.countDocuments()
-          : Equipment.countDocuments({
-              incharge: userId,
-            }),
-      ]);
-    console.log({
-      totalAdmins,
-      totalReleased,
-      totalPending,
-      totalAssets,
-    });
-
-    return res.status(200).json({
-      success: true,
-      data: {
-        totalAdmins,
-        totalReleased,
-        totalPending,
-        totalAssets,
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-});
 
 // CREATE EQUIPMENT
 exports.createEquipment = AsyncErrorHandler(async (req, res, next) => {

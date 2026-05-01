@@ -138,13 +138,13 @@ exports.getAllLoans = AsyncErrorHandler(async (req, res) => {
     // 🔍 SEARCH FILTER
     const searchFilter = search
       ? {
-        $or: [
-          { "borrower.name": { $regex: search, $options: "i" } },
-          { "incharge.name": { $regex: search, $options: "i" } },
-          { "equipmentIds.equipmentName": { $regex: search, $options: "i" } },
-          { "equipmentIds.serialNo": { $regex: search, $options: "i" } },
-        ],
-      }
+          $or: [
+            { "borrower.name": { $regex: search, $options: "i" } },
+            { "incharge.name": { $regex: search, $options: "i" } },
+            { "equipmentIds.equipmentName": { $regex: search, $options: "i" } },
+            { "equipmentIds.serialNo": { $regex: search, $options: "i" } },
+          ],
+        }
       : {};
 
     // 🔢 MAIN PIPELINE
@@ -424,8 +424,9 @@ exports.useRFidGet = AsyncErrorHandler(async (req, res) => {
       firstName: borrowerDoc.linkedId?.first_name,
       lastName: borrowerDoc.linkedId?.last_name,
 
-      fullName: `${borrowerDoc.linkedId?.first_name || ""} ${borrowerDoc.linkedId?.last_name || ""
-        }`.trim(),
+      fullName: `${borrowerDoc.linkedId?.first_name || ""} ${
+        borrowerDoc.linkedId?.last_name || ""
+      }`.trim(),
 
       avatar:
         borrowerDoc.linkedId?.avatar?.url ||
@@ -859,9 +860,7 @@ exports.getLatestEquipment = AsyncErrorHandler(async (req, res) => {
     const role = req.user.role;
     const userId = req.user._id || linkId;
 
-
-
-    console.log("role", role)
+    console.log("role", role);
 
     page = Math.max(1, parseInt(page) || 1);
     limit = Math.min(100, Math.max(1, parseInt(limit)));
@@ -873,11 +872,11 @@ exports.getLatestEquipment = AsyncErrorHandler(async (req, res) => {
       role?.toLowerCase() === "admin"
         ? {} // admin = all data
         : {
-          $or: [
-            { borrowerId: new mongoose.Types.ObjectId(userId) },
-            { inchargeId: new mongoose.Types.ObjectId(userId) },
-          ],
-        };
+            $or: [
+              { borrowerId: new mongoose.Types.ObjectId(userId) },
+              { inchargeId: new mongoose.Types.ObjectId(userId) },
+            ],
+          };
 
     const pipeline = [
       // 🔥 APPLY FILTER EARLY
@@ -998,24 +997,24 @@ exports.getLatestEquipment = AsyncErrorHandler(async (req, res) => {
       // 🔥 SEARCH
       ...(searchTerms.length
         ? [
-          {
-            $match: {
-              $and: searchTerms.map((term) => ({
-                $or: [
-                  { borrowerFullName: { $regex: term, $options: "i" } },
-                  { "borrower.rfidId": { $regex: term, $options: "i" } },
-                  { "incharge.fullName": { $regex: term, $options: "i" } },
-                  {
-                    "equipmentIds.categoryName": {
-                      $regex: term,
-                      $options: "i",
+            {
+              $match: {
+                $and: searchTerms.map((term) => ({
+                  $or: [
+                    { borrowerFullName: { $regex: term, $options: "i" } },
+                    { "borrower.rfidId": { $regex: term, $options: "i" } },
+                    { "incharge.fullName": { $regex: term, $options: "i" } },
+                    {
+                      "equipmentIds.categoryName": {
+                        $regex: term,
+                        $options: "i",
+                      },
                     },
-                  },
-                ],
-              })),
+                  ],
+                })),
+              },
             },
-          },
-        ]
+          ]
         : []),
 
       // ✅ GROUP
@@ -1170,11 +1169,10 @@ exports.getSpecificData = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.generateReport = AsyncErrorHandler(async (req, res) => {
-  let { status, dateFrom, dateTo } = req.query;
-  const userId = req.user._id;
+  let { status, dateFrom, dateTo, linkId } = req.query;
+  const userId = new mongoose.Types.ObjectId(linkId) || req.user._id;
   const role = req.user.role;
-
-  // Date filter builder (unchanged)
+  // Date filter builder
   let dateFilter = {};
   let startDate = null,
     endDate = null;
@@ -1253,6 +1251,7 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
         status: "$equipmentIds.status",
         condition: "$equipmentIds.condition",
         serialNumber: "$equipmentIds.serialNumber",
+        borrowDate: "$equipmentIds.borrowDate", // ✅ ADDED borrowDate
         returnDate: "$equipmentIds.returnDate",
         createdAt: 1,
         categoryName: { $ifNull: ["$categoryInfo.categoryName", "N/A"] },
@@ -1326,10 +1325,10 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
     return isNaN(d.getTime())
       ? fallback
       : d.toLocaleDateString("en-PH", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        });
   };
 
   // Logo (optional)
@@ -1401,20 +1400,23 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
   const headerFontSize = 8.5;
   const dataFontSize = 8;
   const rowHeight = 28;
-  const footerHeight = 15; // taas ng footer text
+  const footerHeight = 15;
 
   let currentY = doc.y;
   let pageNum = 1;
 
-  // Helper: Draw footer sa ilalim ng current page
-  const drawFooter = () => {
+  // Helper: Draw footer with page numbers
+  const drawFooterWithPage = (pageNo, total) => {
     const footerY = doc.page.height - margins.bottom - footerHeight;
-    doc.fontSize(7).font("Helvetica-Oblique").text(
-      `EPDO – Equipment Loan Report  |  Page ${pageNum} of ?`, // temporary, updated later
-      margins.left,
-      footerY,
-      { align: "center", width: pageWidth },
-    );
+    doc
+      .fontSize(7)
+      .font("Helvetica-Oblique")
+      .text(
+        `EPDO – Equipment Loan Report  |  Page ${pageNo} of ${total}`,
+        margins.left,
+        footerY,
+        { align: "center", width: pageWidth },
+      );
   };
 
   // Helper: Draw header with background
@@ -1457,7 +1459,7 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
       doc.fillColor("#000000");
     }
 
-    const loanDate = formatDate(record.createdAt);
+    const loanDate = formatDate(record.borrowDate); // ✅ USING borrowDate
     const returnDate = formatDate(record.returnDate, "Not returned");
 
     const rowData = [
@@ -1484,51 +1486,21 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
     return y + rowHeight;
   };
 
-  // Draw first header
-  currentY = drawHeader(currentY);
-  let rowIndex = 0;
-  let totalPages = 1; // pansamantala, kalkulahin mamaya
-
-  // I-save ang posisyon ng bawat page break para sa tamang page count
-  // Simple approach: i-loop muna para tantiyahin ang total pages, o kaya ay i-draw at i-track.
-  // Mas madali: i-draw ang lahat, tapos i-update ang footer page numbers sa pamamagitan ng pag-render sa pangalawang pass?
-  // Hindi praktikal. Sa halip, gamitin ang karaniwang technique: i-store ang mga page break positions,
-  // o kaya ay i-render nang may temporary page number, tapos i-overwrite? Hindi supported.
-  // Alternative: kalkulahin ang total pages bago mag-draw gamit ang rows per page.
+  // Calculate rows per page and total pages
   const rowsPerPage = Math.floor(
     (pageContentHeight - (currentY - margins.top)) / rowHeight,
   );
-  totalPages = Math.max(1, Math.ceil(data.length / rowsPerPage));
+  const totalPages = Math.max(1, Math.ceil(data.length / rowsPerPage));
 
-  // I-reset ang doc para sa actual drawing? Hindi na kailangan, pero kailangan nating i-reset ang currentY at pageNum.
-  // Dahil hindi tayo pwedeng mag-rewind, gagamitin natin ang precomputed totalPages sa drawFooter.
-  // Ngunit ang currentY ay nagbago na. Kailangan nating i-restart ang drawing? Hindi na kailangan, dahil ang first draw ay ginawa na.
-  // Simple solution: ilipat ang footer drawing function para gamitin ang totalPages na compute bago ang loop.
-  // I-adjust ang drawFooter upang tumanggap ng page number at total pages.
+  // Draw first header
+  currentY = drawHeader(currentY);
+  let rowIndex = 0;
 
-  const drawFooterWithPage = (pageNo, total) => {
-    const footerY = doc.page.height - margins.bottom - footerHeight;
-    doc
-      .fontSize(7)
-      .font("Helvetica-Oblique")
-      .text(
-        `EPDO – Equipment Loan Report  |  Page ${pageNo} of ${total}`,
-        margins.left,
-        footerY,
-        { align: "center", width: pageWidth },
-      );
-  };
-
-  // I-draw muli ang unang header? Hindi, dahil na-draw na.
-  // Sa halip, ituloy ang pagguhit ng mga row, at gamitin ang bagong drawFooterWithPage.
-
-  // I-override ang drawFooter na ginamit sa loop (kung may existing), ngunit wala pa.
-  // Gagamitin natin ang bagong function sa page break at sa dulo.
-
+  // Draw all rows
   for (let i = 0; i < data.length; i++) {
     const record = data[i];
-    // Kailangan ng space para sa row + footer?
     const spaceNeeded = rowHeight + footerHeight;
+
     if (currentY + spaceNeeded > doc.page.height - margins.bottom) {
       drawFooterWithPage(pageNum, totalPages);
       doc.addPage();
@@ -1537,6 +1509,7 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
       currentY = drawHeader(currentY);
       rowIndex = 0;
     }
+
     currentY = drawRow(record, currentY, rowIndex);
     rowIndex++;
   }

@@ -11,7 +11,7 @@ const equipmentLoanSchema = new mongoose.Schema(
         },
         status: {
           type: String,
-          enum: ["Release", "Returned", "Pending", "In-Review","Missing","Damage"],
+          enum: ["Release", "Returned", "Pending", "In-Review", "Missing", "Damage"],
           default: "Pending",
         },
         serialNumber: {
@@ -20,6 +20,9 @@ const equipmentLoanSchema = new mongoose.Schema(
         assistsId: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Equipment",
+        },
+        borrowDate: {
+          type: Date,
         },
         returnDate: {
           type: Date,
@@ -47,7 +50,83 @@ const equipmentLoanSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  },
+  }
 );
+
+
+// ✅ PRE SAVE (CREATE / SAVE)
+equipmentLoanSchema.pre("save", function (next) {
+  if (this.equipmentIds && this.equipmentIds.length > 0) {
+    this.equipmentIds.forEach((item) => {
+
+      // ✅ AUTO BORROW DATE (only if Release)
+      if (item.status === "Release" && !item.borrowDate) {
+        item.borrowDate = new Date();
+      }
+
+      // ✅ AUTO RETURN DATE
+      if (item.status === "Returned" && !item.returnDate) {
+        item.returnDate = new Date();
+      }
+
+    });
+  }
+
+  next();
+});
+
+
+// ✅ PRE UPDATE (findOneAndUpdate / updateOne)
+equipmentLoanSchema.pre("findOneAndUpdate", function (next) {
+  const update = this.getUpdate();
+
+  // 🔹 HANDLE $set (editing existing array)
+  if (update.$set && update.$set.equipmentIds) {
+    update.$set.equipmentIds = update.$set.equipmentIds.map((item) => {
+
+      // borrow date
+      if (item.status === "Release" && !item.borrowDate) {
+        item.borrowDate = new Date();
+      }
+
+      // return date
+      if (item.status === "Returned" && !item.returnDate) {
+        item.returnDate = new Date();
+      }
+
+      return item;
+    });
+  }
+
+  // 🔹 HANDLE $push (adding new equipment)
+  if (update.$push && update.$push.equipmentIds) {
+    let item = update.$push.equipmentIds;
+
+    // if array push
+    if (Array.isArray(item)) {
+      item = item.map((i) => {
+        if (i.status === "Release" && !i.borrowDate) {
+          i.borrowDate = new Date();
+        }
+        if (i.status === "Returned" && !i.returnDate) {
+          i.returnDate = new Date();
+        }
+        return i;
+      });
+      update.$push.equipmentIds = item;
+    } else {
+      // single object push
+      if (item.status === "Release" && !item.borrowDate) {
+        item.borrowDate = new Date();
+      }
+      if (item.status === "Returned" && !item.returnDate) {
+        item.returnDate = new Date();
+      }
+    }
+  }
+
+  next();
+});
+
 
 module.exports = mongoose.model("LoanEquipment", equipmentLoanSchema);
