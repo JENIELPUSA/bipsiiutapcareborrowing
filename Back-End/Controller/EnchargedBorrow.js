@@ -1168,10 +1168,11 @@ exports.getSpecificData = AsyncErrorHandler(async (req, res) => {
   }
 });
 
+
 exports.generateReport = AsyncErrorHandler(async (req, res) => {
   let { status, dateFrom, dateTo, linkId } = req.query;
   const userId = new mongoose.Types.ObjectId(linkId) || req.user._id;
-  const role = req.user.role;
+  const role = req.user.rbd268ole;
   
   // Date filter builder
   let dateFilter = {};
@@ -1252,7 +1253,11 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
         _id: "$equipmentIds._id",
         status: "$equipmentIds.status",
         condition: "$equipmentIds.condition",
-        serialNumber: "$equipmentIds.serialNumber",
+        serialNumber: { 
+          $trim: { 
+            input: { $ifNull: ["$equipmentIds.serialNumber", ""] } 
+          } 
+        },
         borrowDate: "$equipmentIds.borrowDate",
         returnDate: "$equipmentIds.returnDate",
         createdAt: 1,
@@ -1302,11 +1307,28 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
   );
 
   let data = await LoanEquipment.aggregate(pipeline);
+  
+  // Clean and validate serial numbers (remove tabs, spaces, special characters)
+  data = data.map(item => ({
+    ...item,
+    serialNumber: item.serialNumber && item.serialNumber !== "" 
+      ? item.serialNumber.toString().trim().replace(/[\t\n\r\s]+/g, ' ') 
+      : "N/A"
+  })).filter(item => {
+    // Only filter out truly invalid serial numbers
+    const serial = item.serialNumber;
+    return serial && 
+           serial !== "N/A" && 
+           serial !== "" && 
+           serial !== "null" &&
+           serial !== "undefined" &&
+           serial.length > 0;
+  });
+  
   if (!data || data.length === 0)
     throw new CustomError("No loan records found for the given filters", 404);
 
-  // ========== FIXED: Calculate statistics based on ALL data ==========
-  // Get all data without status filter for accurate summary statistics
+  // ========== Calculate statistics based on ALL data ==========
   const summaryPipeline = [{ $match: matchStage }, { $unwind: "$equipmentIds" }];
   
   // Add role-based filtering for summary (same as main query)
@@ -1327,11 +1349,6 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
   const missingItems = allData.filter(
     (item) => item.equipmentIds.status === "Missing"
   ).length;
-
-  // If status filter was applied, the displayed data should still be filtered
-  // But summary stats show ALL data within date range
-  // If you want the report to ONLY show filtered data in the table but stats still reflect ALL:
-  // data remains as filtered above (with status condition)
 
   // ========== LANDSCAPE PDF ==========
   const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 30 });
@@ -1397,7 +1414,7 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
     .text(filterText, { align: "center" })
     .moveDown(0.3);
 
-  // Stats line - NOW INCLUDES Missing, Returned, Damaged
+  // Stats line - INCLUDES Missing, Returned, Damaged
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
@@ -1484,7 +1501,16 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
     }
 
     const loanDate = formatDate(record.borrowDate);
-    const returnDate = formatDate(record.returnDate, "Not returned");
+    
+    // FIX: For Pending status, show blank/empty instead of "Not returned"
+    let returnDate = "";
+    if (record.status === "Pending") {
+      returnDate = ""; // Blank for pending items
+    } else if (record.status === "Returned") {
+      returnDate = formatDate(record.returnDate, "");
+    } else {
+      returnDate = formatDate(record.returnDate, "Not returned");
+    }
 
     const rowData = [
       loanDate,

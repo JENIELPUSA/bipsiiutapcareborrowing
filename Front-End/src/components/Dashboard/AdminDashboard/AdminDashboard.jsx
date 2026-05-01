@@ -220,9 +220,6 @@ export default function App() {
             window.removeEventListener('pageshow', handlePageShow);
         };
     }, [fetchDashboardData]);
-
-    console.log("Rendering dashboard with counts:", dashboardCounts);
-
     const getCards = () => {
         const baseCards = [
             { title: "Total Assets", value: dashboardCounts?.totalAssets || 0, icon: Package, accent: "text-[#1e40af] dark:text-[#3b82f6]" },

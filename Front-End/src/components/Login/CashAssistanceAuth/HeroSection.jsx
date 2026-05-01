@@ -108,7 +108,7 @@ const HeroSection = () => {
 
                         {/* SYSTEM TITLE */}
                         <h1 className="mb-4 text-6xl font-black text-white md:text-8xl">
-                            BISU<span className="text-yellow-500">EBS</span>
+                            BIPSU<span className="text-yellow-500">EBS</span>
                         </h1>
 
                         {/* SUBTITLE */}
