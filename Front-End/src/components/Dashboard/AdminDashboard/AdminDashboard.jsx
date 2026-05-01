@@ -233,7 +233,7 @@ export default function App() {
         // Only add Total Admins card if role is admin
         if (role === "admin") {
             baseCards.push({ 
-                title: "Total Admin", 
+                title: "Total Accounts", 
                 value: dashboardCounts?.totalAdmins || 0, 
                 icon: Users, 
                 accent: "text-[#1e40af] dark:text-[#3b82f6]" 

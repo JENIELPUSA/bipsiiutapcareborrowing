@@ -219,66 +219,176 @@ export const LoanEquipmentProvider = ({ children }) => {
         }
     };
 
-    const downloadEnchargeBorrowReport = useCallback(
-        async (filters = {}) => {
-            if (!authToken) {
-                setCustomError("Authentication required to download report");
-                return false;
+const downloadEnchargeBorrowReport = useCallback(
+    async (filters = {}) => {
+        console.log("📥 Download function called"); // Debug log
+        
+        if (!authToken) {
+            console.log("❌ No auth token");
+            setCustomError("Authentication required to download report");
+            setModalStatus("error");
+            setShowModal(true);
+            return false;
+        }
+        
+        try {
+            console.log("🔄 Starting download process...");
+            
+            const params = new URLSearchParams();
+            if (filters.status && filters.status !== "All") {
+                params.append("status", filters.status);
             }
-            try {
-                const params = new URLSearchParams();
-                if (filters.status && filters.status !== "All") {
-                    params.append("status", filters.status);
-                }
-                if (linkId) {
-                    params.append("linkId", linkId);
-                }
-                if (filters.dateFrom) {
-                    params.append("dateFrom", filters.dateFrom);
-                }
-                if (filters.dateTo) {
-                    params.append("dateTo", filters.dateTo);
-                }
+            if (linkId) {
+                params.append("linkId", linkId);
+            }
+            if (filters.dateFrom) {
+                params.append("dateFrom", filters.dateFrom);
+            }
+            if (filters.dateTo) {
+                params.append("dateTo", filters.dateTo);
+            }
 
-                const queryString = params.toString();
-                const url = `${backendURL}/api/v1/EnchargeBorrowRoute/generateReport${queryString ? `?${queryString}` : ""}`;
+            const queryString = params.toString();
+            const url = `${backendURL}/api/v1/EnchargeBorrowRoute/generateReport${queryString ? `?${queryString}` : ""}`;
+            console.log("🌐 Request URL:", url);
 
-                // Gamitin ang auth headers para sa authorization
-                const response = await axios({
-                    url: url,
-                    method: "GET",
-                    responseType: "blob",
-                    headers: {
-                        Authorization: `Bearer ${authToken}`,
-                    },
-                    withCredentials: true,
-                });
+            const response = await axios({
+                url: url,
+                method: "GET",
+                responseType: "blob",
+                headers: {
+                    Authorization: `Bearer ${authToken}`,
+                },
+                withCredentials: true,
+            });
 
-                const blob = new Blob([response.data], { type: "application/pdf" });
-                const blobUrl = window.URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.href = blobUrl;
-                const filename = `Encharge_Borrow_Report_${Date.now()}.pdf`;
-                link.setAttribute("download", filename);
-                document.body.appendChild(link);
-                link.click();
-                link.parentNode.removeChild(link);
-                window.URL.revokeObjectURL(blobUrl);
-                return true;
-            } catch (err) {
-                console.error("PDF Download Error:", err);
-                let message = "Hindi ma-download ang report. Pakisubukan muli.";
-                if (err.response && err.response.status === 404) {
+            console.log("✅ Response received, status:", response.status);
+            
+            // IMPORTANT: Check if response is actually an error PDF or HTML
+            if (response.data && response.data.type === "application/json") {
+                // This might be an error disguised as blob
+                const text = await response.data.text();
+                const errorData = JSON.parse(text);
+                throw new Error(errorData.message || "Unknown error");
+            }
+
+            const blob = new Blob([response.data], { type: "application/pdf" });
+            
+            // Check if blob is actually a PDF (not HTML error page)
+            if (blob.size < 100) {
+                console.log("⚠️ Blob too small, might be error");
+                const text = await blob.text();
+                if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+                    throw new Error("Server returned HTML error page");
+                }
+            }
+            
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = blobUrl;
+            const filename = `Encharge_Borrow_Report_${Date.now()}.pdf`;
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+            
+            console.log("🎉 SUCCESS - Setting success modal");
+            // Clear any existing modals first
+            setShowModal(false);
+            setModalStatus("");
+            
+            // Small delay to ensure modal is reset
+            setTimeout(() => {
+                setModalStatus("success");
+                setShowModal(true);
+                console.log("✅ Success modal shown");
+                
+                // Auto-hide after 3 seconds
+                setTimeout(() => {
+                    setShowModal(false);
+                    setModalStatus("");
+                }, 3000);
+            }, 100);
+            
+            return true;
+        } catch (err) {
+            console.error("❌ ERROR in download:", err);
+            
+            // Clear any existing modals first
+            setShowModal(false);
+            setModalStatus("");
+            
+            let message = "Hindi ma-download ang report. Pakisubukan muli.";
+
+            if (err.response) {
+                console.log("📡 Error response status:", err.response.status);
+                console.log("📡 Error response headers:", err.response.headers);
+                
+                if (err.response.data instanceof Blob) {
+                    try {
+                        const errorText = await err.response.data.text();
+                        console.log("📝 Error text from blob:", errorText);
+                        
+                        try {
+                            const errorData = JSON.parse(errorText);
+                            message = errorData.message || errorData.error || message;
+                            console.log("📝 Parsed error message:", message);
+                        } catch (e) {
+                            // If not JSON, use the text directly if it's short
+                            if (errorText.length < 200) {
+                                message = errorText;
+                            }
+                        }
+                    } catch (parseError) {
+                        console.error("Error parsing error response:", parseError);
+                    }
+                } else if (err.response.data && err.response.data.message) {
+                    message = err.response.data.message;
+                } else if (err.response.statusText) {
+                    message = err.response.statusText;
+                }
+                
+                // Specific status codes
+                if (err.response.status === 404) {
                     message = "Walang nakitang loan records para sa napiling filter.";
-                } else if (err.response && err.response.status === 400) {
+                } else if (err.response.status === 400) {
                     message = "Invalid na date format. Pakisigurado ang petsa.";
+                } else if (err.response.status === 401) {
+                    message = "Unauthorized. Pakilogin muli.";
+                } else if (err.response.status === 403) {
+                    message = "Wala kang permission para ma-download ang report na ito.";
+                } else if (err.response.status === 500) {
+                    message = "Server error. Pakisubukan muli mamaya.";
                 }
-                setCustomError(message);
-                return false;
+            } else if (err.request) {
+                message = "Hindi ma-connect sa server. Pakicheck ang iyong internet connection.";
+            } else if (err.message) {
+                message = err.message;
             }
-        },
-        [authToken, backendURL, linkId],
-    );
+
+            console.log("❌ Setting error modal with message:", message);
+            setCustomError(message);
+            
+            // Small delay to ensure modal state is reset
+            setTimeout(() => {
+                setModalStatus("error");
+                setShowModal(true);
+                console.log("❌ Error modal shown");
+                
+                // Auto-hide after 4 seconds
+                setTimeout(() => {
+                    setShowModal(false);
+                    setModalStatus("");
+                    setCustomError("");
+                }, 4000);
+            }, 100);
+            
+            return false;
+        }
+    },
+    [authToken, backendURL, linkId],
+);
     // --- Effects ---
     useEffect(() => {
         fetchEquipmentData();

@@ -1172,6 +1172,7 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
   let { status, dateFrom, dateTo, linkId } = req.query;
   const userId = new mongoose.Types.ObjectId(linkId) || req.user._id;
   const role = req.user.role;
+  
   // Date filter builder
   let dateFilter = {};
   let startDate = null,
@@ -1203,6 +1204,7 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
 
   const pipeline = [{ $match: matchStage }, { $unwind: "$equipmentIds" }];
 
+  // Only apply status filter if status is provided and not "All"
   if (status && status !== "All") {
     pipeline.push({ $match: { "equipmentIds.status": status } });
   }
@@ -1251,7 +1253,7 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
         status: "$equipmentIds.status",
         condition: "$equipmentIds.condition",
         serialNumber: "$equipmentIds.serialNumber",
-        borrowDate: "$equipmentIds.borrowDate", // ✅ ADDED borrowDate
+        borrowDate: "$equipmentIds.borrowDate",
         returnDate: "$equipmentIds.returnDate",
         createdAt: 1,
         categoryName: { $ifNull: ["$categoryInfo.categoryName", "N/A"] },
@@ -1299,15 +1301,37 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
     },
   );
 
-  const data = await LoanEquipment.aggregate(pipeline);
+  let data = await LoanEquipment.aggregate(pipeline);
   if (!data || data.length === 0)
     throw new CustomError("No loan records found for the given filters", 404);
 
-  const totalRecords = data.length;
-  const returnedItems = data.filter(
-    (item) => item.status === "Returned",
+  // ========== FIXED: Calculate statistics based on ALL data ==========
+  // Get all data without status filter for accurate summary statistics
+  const summaryPipeline = [{ $match: matchStage }, { $unwind: "$equipmentIds" }];
+  
+  // Add role-based filtering for summary (same as main query)
+  if (role === "in-charge") {
+    summaryPipeline.push({ $match: { inchargeId: userId } });
+  }
+  
+  const allData = await LoanEquipment.aggregate(summaryPipeline);
+  
+  const totalRecords = allData.length;
+  const returnedItems = allData.filter(
+    (item) => item.equipmentIds.status === "Returned",
   ).length;
-  const issuesFound = data.filter((item) => item.condition !== "Ok").length;
+  const damagedItems = allData.filter(
+    (item) => item.equipmentIds.condition === "Damaged" || 
+             (item.equipmentIds.condition !== "Ok" && item.equipmentIds.condition !== "Good")
+  ).length;
+  const missingItems = allData.filter(
+    (item) => item.equipmentIds.status === "Missing"
+  ).length;
+
+  // If status filter was applied, the displayed data should still be filtered
+  // But summary stats show ALL data within date range
+  // If you want the report to ONLY show filtered data in the table but stats still reflect ALL:
+  // data remains as filtered above (with status condition)
 
   // ========== LANDSCAPE PDF ==========
   const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 30 });
@@ -1373,12 +1397,12 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
     .text(filterText, { align: "center" })
     .moveDown(0.3);
 
-  // Stats line
+  // Stats line - NOW INCLUDES Missing, Returned, Damaged
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
     .text(
-      `Total: ${totalRecords}    |    Returned: ${returnedItems}    |    Issues: ${issuesFound}`,
+      `Total: ${totalRecords}    |    Returned: ${returnedItems}    |    Damaged: ${damagedItems}    |    Missing: ${missingItems}`,
       { align: "center" },
     )
     .moveDown(0.2)
@@ -1459,7 +1483,7 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
       doc.fillColor("#000000");
     }
 
-    const loanDate = formatDate(record.borrowDate); // ✅ USING borrowDate
+    const loanDate = formatDate(record.borrowDate);
     const returnDate = formatDate(record.returnDate, "Not returned");
 
     const rowData = [
@@ -1487,9 +1511,9 @@ exports.generateReport = AsyncErrorHandler(async (req, res) => {
   };
 
   // Calculate rows per page and total pages
-  const rowsPerPage = Math.floor(
+  const rowsPerPage = Math.max(1, Math.floor(
     (pageContentHeight - (currentY - margins.top)) / rowHeight,
-  );
+  ));
   const totalPages = Math.max(1, Math.ceil(data.length / rowsPerPage));
 
   // Draw first header
